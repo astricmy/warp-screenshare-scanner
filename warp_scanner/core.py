@@ -1,6 +1,6 @@
 """Contratos comuns e execução limitada de comandos somente leitura."""
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import hashlib
 import os
 import re
@@ -101,6 +101,11 @@ def sanitize(value, key=""):
     if isinstance(value, (list,tuple)):
         return [sanitize(v,key) for v in value]
     if isinstance(value,str):
+        if key == "security_patch" and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            try:
+                return date.fromisoformat(value).isoformat()
+            except ValueError:
+                pass
         if key == "profile_url" and re.fullmatch(r"https://www\.roblox\.com/users/[1-9][0-9]{0,18}/profile",value):
             return value
         # Identificadores técnicos gerados pelo scanner não são conteúdo do aparelho.
@@ -110,8 +115,12 @@ def sanitize(value, key=""):
             return value
         if key == "session_code" and re.fullmatch(r"WARP-[A-Z0-9]{4,24}",value):
             return value
-        if key in {"timestamp","time","mtime","ctime","ctime_metadados","firstInstallTime","lastUpdateTime","created"} and re.fullmatch(r"[0-9TZ +:.\-]{10,40}",value):
-            return value[:256]
+        if key in {"timestamp","time","mtime","ctime","ctime_metadados","firstInstallTime","owner_first_install","lastUpdateTime","created"} and re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?)?",value):
+            try:
+                datetime.fromisoformat(value.replace("Z", "+00:00"))
+                return value
+            except ValueError:
+                pass
         return redact(value,1000)
     return value if isinstance(value,(bool,int,float,type(None))) else redact(str(value),160)
 

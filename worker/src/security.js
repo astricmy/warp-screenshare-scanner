@@ -1,5 +1,5 @@
 // Validações não dependem do runtime Cloudflare e são testadas com Node.
-import { MAX_BASE64 } from "./evidence.js";
+import { MAX_BASE64, MAX_AVATAR_BASE64 } from "./evidence.js";
 export const MAX_BYTES = 256 * 1024;
 export const BRAND = "WARP SCREENSHARE";
 export const CODE = /^WARP-[A-Z0-9]{4,24}$/;
@@ -104,10 +104,22 @@ function profileURL(value) {
   if (!/^https:\/\/www\.roblox\.com\/users\/[1-9]\d{0,19}\/profile$/.test(value)) throw new PublicError(400, "Perfil inválido.");
 }
 
-function thumbnailURL(value) {
-  let parsed;
-  try { parsed = new URL(value); } catch { throw new PublicError(400, "Miniatura inválida."); }
-  if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.port || parsed.search || parsed.hash || !(parsed.hostname === "rbxcdn.com" || parsed.hostname.endsWith(".rbxcdn.com"))) throw new PublicError(400, "Miniatura inválida.");
+function richText(value, max, profile = "", footer = false) {
+  text(value, max);
+  if (/@(?:everyone|here)\b|<[@#][!&]?\d+>|<\/(?:[^:>]+):\d+>/i.test(value)) throw new PublicError(400, "Menção não permitida.");
+  // Remover somente spans de uma linha delimitados por crases literais.
+  // Nunca tratar uma crase escapada ou cerca Markdown como proteção de URL.
+  if (/\\`|``/.test(value)) throw new PublicError(400, "Delimitador de código inválido.");
+  let outside = value;
+  if (profile) {
+    outside = outside.replace(`[🔗 Perfil](${profile})`, "");
+    outside = outside.replace(`[Abrir perfil](${profile})`, "");
+  }
+  if (footer) outside = outside.replace(/^(?:🛡️ )?WARP SCREENSHARE • https:\/\/discord\.gg\/pthFZGupmH(?= • |$)/, "");
+  outside = outside.replace(/`[^`\r\n]*`/g, "");
+  if (outside.includes("`")) throw new PublicError(400, "Span de código incompleto.");
+  if (/[a-z][\w+.-]*:\/\/|\b(?:javascript|mailto|tel):|\bdata:[\w-]+\/|\bwww\.|\bdiscord\.gg\/|\]\s*\(/i.test(outside)) throw new PublicError(400, "Link não permitido.");
+  return value.length;
 }
 
 export function validateReport(value, claims) {
@@ -121,33 +133,44 @@ export function validateReport(value, claims) {
   }
   if (!Array.isArray(value.payload.embeds) || value.payload.embeds.length < 1 || value.payload.embeds.length > 10) throw new PublicError(400, "Embeds inválidos.");
   let total = 0;
+  const summary = value.payload.embeds[0];
   for (const embed of value.payload.embeds) {
     object(embed, ["title", "description", "url", "color", "fields", "footer", "timestamp", "thumbnail"], []);
-    if ("title" in embed) total += text(embed.title, 256).length;
-    if ("description" in embed) total += text(embed.description, 4096).length;
-    if ("url" in embed) profileURL(embed.url);
+    if ("url" in embed) {
+      if (embed !== summary || typeof embed.url !== "string") throw new PublicError(400, "Perfil fora do resumo.");
+      profileURL(embed.url);
+    }
+    if ("title" in embed) total += richText(embed.title, 256);
+    if ("description" in embed) total += richText(embed.description, embed === summary ? 3800 : 4096, embed === summary ? summary.url : "");
     if ("color" in embed && (!Number.isInteger(embed.color) || embed.color < 0 || embed.color > 0xffffff)) throw new PublicError(400, "Cor inválida.");
     if ("timestamp" in embed && (typeof embed.timestamp !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(embed.timestamp) || !Number.isFinite(Date.parse(embed.timestamp)))) throw new PublicError(400, "Data inválida.");
     if ("fields" in embed) {
       if (!Array.isArray(embed.fields) || embed.fields.length > 25) throw new PublicError(400, "Campos do embed inválidos.");
       for (const field of embed.fields) {
         object(field, ["name", "value", "inline"], ["name", "value"]);
-        total += text(field.name, 256).length + text(field.value, 1024).length;
+        total += richText(field.name, 256) + richText(field.value, 1024, embed === summary ? summary.url : "");
         if ("inline" in field && typeof field.inline !== "boolean") throw new PublicError(400, "Campo inline inválido.");
       }
     }
-    if ("footer" in embed) { object(embed.footer, ["text"]); total += text(embed.footer.text, 2048).length; }
-    if ("thumbnail" in embed) { object(embed.thumbnail, ["url"]); thumbnailURL(embed.thumbnail.url); }
+    if ("footer" in embed) { object(embed.footer, ["text"]); total += richText(embed.footer.text, 2048, "", true); }
+    if ("thumbnail" in embed) {
+      object(embed.thumbnail, ["url"]);
+      if (embed !== summary || embed.thumbnail.url !== "attachment://avatar.png" || !summary.url) throw new PublicError(400, "Miniatura inválida.");
+    }
     if (!embed.title && !embed.description && !embed.fields?.length) throw new PublicError(400, "Embed vazio.");
   }
   if (total > 6000) throw new PublicError(400, "Embeds excedem 6000 caracteres; use anexos.");
-  if (!Array.isArray(value.attachments) || ![2, 3].includes(value.attachments.length)) throw new PublicError(400, "Anexos esperados: JSON, TXT e no máximo um PNG revisado.");
+  if (!Array.isArray(value.attachments) || value.attachments.length < 2 || value.attachments.length > 4) throw new PublicError(400, "Anexos inválidos.");
   const seen = new Set();
   for (const file of value.attachments) {
     object(file, ["filename", "content", "content_type"]);
     if (file.content_type === "image/png") {
-      if (file !== value.attachments[2] || file.filename !== `prova_${value.scan_id}.png` ||
-          typeof file.content !== "string" || !file.content.length || file.content.length > MAX_BASE64) throw new PublicError(400, "Anexo PNG inválido.");
+      const kind = file.filename === "avatar.png" ? "avatar" : "prova";
+      if (!value.attachments.slice(2).includes(file) || seen.has(kind) ||
+          (kind === "prova" && file.filename !== `prova_${value.scan_id}.png`) ||
+          typeof file.content !== "string" || !file.content.length ||
+          file.content.length > (kind === "avatar" ? MAX_AVATAR_BASE64 : MAX_BASE64)) throw new PublicError(400, "Anexo PNG inválido.");
+      seen.add(kind);
       continue;
     }
     const extension = file.content_type === "application/json" ? "json" : file.content_type === "text/plain" ? "txt" : null;
@@ -159,6 +182,7 @@ export function validateReport(value, claims) {
       if (!report || typeof report !== "object" || Array.isArray(report) || report.scan_id !== value.scan_id || report.session_code !== value.session_code) throw new PublicError(400, "Anexo não corresponde ao scan.");
     }
   }
+  if (!seen.has("json") || !seen.has("txt") || Boolean(summary.thumbnail) !== seen.has("avatar")) throw new PublicError(400, "Anexo obrigatório ou referência de avatar divergente.");
   // Defesa adicional; a minimização e redação detalhada ocorrem no scanner.
   const serialized = JSON.stringify({ ...value, attachments: value.attachments.filter(f => f.content_type !== "image/png") });
   if (/(?:_|\\u005f)\|WARNING:-DO-NOT-SHARE-THIS|https?:\/?\/?(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/|Bearer\s+[A-Za-z0-9._-]{16,}|[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]{1,253}\.[A-Z]{2,63}/i.test(serialized)) throw new PublicError(400, "Possível segredo ou dado pessoal: revise a redação local.");

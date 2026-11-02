@@ -101,7 +101,7 @@ test("URL de perfil e miniatura não permitem hosts arbitrários", () => {
     const r = report(); r.payload.embeds[0].url = url; assert.throws(() => validateReport(r, claims()));
   }
   const r = report(); r.payload.embeds[0].thumbnail = { url: "https://tr.rbxcdn.com/avatar.png" };
-  assert.doesNotThrow(() => validateReport(r, claims()));
+  assert.throws(() => validateReport(r, claims()));
   r.payload.embeds[0].thumbnail.url = "https://rbxcdn.com.evil.invalid/a";
   assert.throws(() => validateReport(r, claims()));
 });
@@ -201,13 +201,32 @@ test("GET signatures usa token e quotas sem consumir entrega", async () => {
   for (let i = 0; i < 9; i++) assert.equal((await worker.fetch(new Request("https://relay.invalid/signatures", { headers }), env)).status, 200);
   assert.equal((await worker.fetch(new Request("https://relay.invalid/signatures", { headers }), env)).status, 429);
 });
-test("envelope produzido por scan --test passa validação estrita", async () => {
+test("envelope do formatador Python com perfil e avatar sintéticos chega intacto ao multipart", async t => {
   const fixture = JSON.parse(await readFile(new URL("./fixtures/synthetic-envelope.json", import.meta.url), "utf8"));
   const value = validateReport(fixture, { code: fixture.session_code });
   assert.equal(value.payload.embeds.length, 3);
   assert.ok(Buffer.byteLength(JSON.stringify(value)) < MAX_BYTES);
   const attached = JSON.parse(value.attachments.find(a => a.content_type === "application/json").content);
   assert.equal(attached.synthetic, true);
+  const summary = value.payload.embeds[0];
+  assert.equal(summary.title, "🛡️ Relatório de Verificação | WARP SCREENSHARE");
+  assert.equal(summary.color, 0xffffff);
+  assert.match(summary.description, /\*\*Roblox User:\*\* `JogadorExemplo`/);
+  assert.ok(summary.description.includes(`[🔗 Perfil](${summary.url})`));
+  assert.equal(summary.thumbnail.url, "attachment://avatar.png");
+  let received = false;
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    const sent = JSON.parse(init.body.get("payload_json"));
+    const file = init.body.get("files[2]");
+    assert.equal(sent.embeds[0].description, summary.description);
+    assert.equal(file.name, "avatar.png");
+    assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.from(fixture.attachments[2].content, "base64"));
+    received = true;
+    return new Response("{}");
+  });
+  const response = await worker.fetch(await request(fixture, { headers: { "X-Warp-Evidence": "png" } }), environment());
+  assert.equal(response.status, 200);
+  assert.equal(received, true);
 });
 
 // PNG sintético de 1 × 1 para exercitar o protocolo. O scanner nunca oferece esta imagem ao jogador.
@@ -280,4 +299,67 @@ test("PNG com CRC inválido é recusado mesmo com hash atualizado", async () => 
   data.attachments[0].content = JSON.stringify(info);
   data.attachments[2].content = bytes.toString("base64");
   assert.equal((await worker.fetch(await request(data, { headers: { "X-Warp-Evidence": "png" } }), environment())).status, 400);
+});
+
+function withAvatar(data = report()) {
+  data.attachments.push({ filename: "avatar.png", content_type: "image/png", content: reviewedReport().attachments[2].content });
+  data.payload.embeds[0].thumbnail = { url: "attachment://avatar.png" };
+  return data;
+}
+
+test("avatar e captura coexistem com JSON/TXT e thumbnail local em multipart", async t => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async (_url, init) => {
+    const payload = JSON.parse(init.body.get("payload_json"));
+    assert.equal(payload.embeds[0].thumbnail.url, "attachment://avatar.png");
+    assert.deepEqual(payload.allowed_mentions, { parse: [] });
+    const file = init.body.get(`files[${calls === 0 ? 2 : 3}]`);
+    assert.equal(file.name, "avatar.png");
+    assert.equal(file.type, "image/png");
+    assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.from(reviewedReport().attachments[2].content, "base64"));
+    calls++;
+    return new Response("{}");
+  });
+  for (const data of [withAvatar(), withAvatar(reviewedReport())]) {
+    assert.equal((await worker.fetch(await request(data, { headers: { "X-Warp-Evidence": "png" } }), environment())).status, 200);
+  }
+  assert.equal(calls, 2);
+});
+
+test("avatar exige PNG válido, tamanho limitado, perfil e referência na primeira embed", async () => {
+  for (const change of [
+    d => { delete d.payload.embeds[0].thumbnail; },
+    d => { delete d.payload.embeds[0].url; },
+    d => { d.payload.embeds.push({ title: "Detalhes", thumbnail: d.payload.embeds[0].thumbnail }); },
+    d => { d.attachments.pop(); },
+    d => { d.attachments.push({ ...d.attachments[2] }); },
+    d => { d.attachments[2].content = Buffer.from("Arquivo que não é PNG").toString("base64"); },
+    d => { d.attachments[2].content = Buffer.alloc(512 * 1024 + 1).toString("base64"); },
+  ]) {
+    const d = withAvatar();
+    change(d);
+    const res = await worker.fetch(await request(d, { headers: { "X-Warp-Evidence": "png" } }), environment());
+    assert.equal(res.status, 400);
+  }
+});
+
+test("permite só o perfil numérico coerente e URLs de conteúdo dentro de spans", () => {
+  function tryDescription(description) {
+    const d = report(); d.payload.embeds[0].description = description;
+    return () => validateReport(d, claims());
+  }
+  assert.doesNotThrow(tryDescription("👤 **Roblox User:** `Exemplo` • [🔗 Perfil](https://www.roblox.com/users/123/profile)\n└ `https://origem.invalid/x`"));
+  for (const text of [
+    "Acesse https://origem.invalid/", "[perfil](https://origem.invalid/)", "[🔗 Perfil](https://www.roblox.com/users/456/profile)",
+    "<@123456>", "<#123456>", "@everyone", "www.origemdados.invalid", "discord.gg/nascimentos",
+    "\\`https://origem.invalid/\\`", "texto `aberto https://origem.invalid/", "[perfil](//origem.invalid)",
+  ]) assert.throws(tryDescription(text), PublicError);
+});
+
+test("resumo mede UTF-16 até 3800 e detalhes respeitam o total de 6000", () => {
+  const d = report(); d.payload.embeds[0].description = "🛡".repeat(1900);
+  assert.doesNotThrow(() => validateReport(d, claims()));
+  d.payload.embeds[0].description += "x"; assert.throws(() => validateReport(d, claims()));
+  d.payload.embeds[0].description = "a".repeat(3000); d.payload.embeds.push({ title: "Detalhes", description: "a".repeat(3000) });
+  assert.throws(() => validateReport(d, claims()));
 });

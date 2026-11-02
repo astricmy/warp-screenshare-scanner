@@ -17,6 +17,7 @@ from warp_scanner.integrity import collect_integrity, load_signatures
 from warp_scanner.report import build, render_text, envelope
 from warp_scanner.discord import send
 from warp_scanner.locations import add_locations
+from warp_scanner.avatar import fetch_headshot
 
 
 def positive(value):
@@ -37,7 +38,9 @@ def arguments(argv=None):
     parser.add_argument("--session-code",default="")
     parser.add_argument("--nick",default="")
     parser.add_argument("--expected-nick",default="")
-    parser.add_argument("--discord-user",default="",help="Nome do Discord informado pelo jogador, incluído apenas com consentimento")
+    parser.add_argument("--discord", "--discord-user", dest="discord_user", default="",
+                        help="Nome do Discord informado pelo jogador, incluído apenas com consentimento")
+    parser.add_argument("--discord-id", default="", help="ID público do Discord informado pelo jogador ou pela staff (opcional)")
     parser.add_argument("--output",type=Path,help="Diretório explícito para salvar os relatórios minimizados")
     parser.add_argument("--version",action="version",version=config.VERSION)
     args=parser.parse_args(argv)
@@ -59,23 +62,116 @@ def synthetic_modules(ctx):
     finding=ctx.finding("M8","scripts","DEMONSTRAÇÃO: padrão em amostra fictícia",{"caminho":"Download/exemplo.lua","padroes":result["padroes"],"trecho":result["trecho"],"urls":result["urls"]},result["level"],result["weight_key"])
     modules=[unavailable(f"M{i}","Simulação: aparelho não consultado") for i in range(1,8)]
     modules[1]["data"]={"nick":"JogadorExemplo","displayName":"Exemplo fictício","ownership_verified":False}
+    modules[5].update(status="PARCIAL", reason="Exemplo fictício; nenhuma propriedade foi consultada.",
+                      data={"device":{"brand":"Marca Exemplo","model":"Modelo X","android":"14",
+                                      "api_level":34,"security_patch":"2026-09-01"},
+                            "usb_debug":True,"auto_time":True})
     modules.append({"module":"M8","requires":"none","status":"PARCIAL","reason":"Fixture em memória, sem arquivos reais nem clipboard","data":{},"findings":[finding],"checks":[{"name":"Fixture Lua","requires":"none","status":"OK","reason":"Análise estática em memória"}]})
     modules.extend(unavailable(m,"Simulação: aparelho e rede não consultados") for m in ("M9","M10","M11"))
+    modules[8].update(status="PARCIAL", reason="Sessões de uso fictícias para demonstração.",
+                      data={"uso_roblox":{"segundos_pareados_observados":4320,"intervalos_pareados":2,
+                                          "total_exato_72h":None}})
     return modules
 
 
-def save_report(report, destination, captures=None):
-    destination.mkdir(parents=True,exist_ok=True)
-    # Arquivos de relatório são uma saída explicitamente autorizada, não temporários ocultos.
-    for item in envelope(report,captures)["attachments"]:
-        path=destination/item["filename"]
-        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-        with os.fdopen(fd,"wb") as stream:
-            if item["content_type"]=="image/png":
-                stream.write(base64.b64decode(item["content"],validate=True))
-            else:
-                stream.write(item["content"].encode("utf-8"))
-    print("Relatórios e anexos aprovados salvos no diretório escolhido.")
+def default_output():
+    return Path.home() / ".local" / "share" / "warp-screenshare" / "relatorios"
+
+
+def _write_private(path, content):
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    fd = os.open(path, flags, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        # Apenas o arquivo exclusivo recém-criado pode ficar incompleto.
+        path.unlink(missing_ok=True)
+        raise
+
+
+def save_report(report, destination=None, captures=None):
+    """Salva cada formato independentemente. A cópia local independe do envelope do Discord."""
+    private = destination is None
+    try:
+        destination = default_output() if private else Path(destination).expanduser()
+        if destination.is_symlink():
+            raise ValueError("Destino simbólico")
+        if private and not destination.resolve().is_relative_to(Path.home().resolve()):
+            raise ValueError("Destino privado redirecionado para fora da pasta pessoal")
+        destination.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if private and os.name == "posix":
+            os.chmod(destination, 0o700)
+        destination = destination.resolve(strict=True)
+    except (OSError, ValueError, RuntimeError):
+        print("Falha ao abrir a pasta de relatórios. O envio opcional continua disponível.")
+        return False
+
+    scan_id = report["scan_id"]
+    if not re.fullmatch(r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", scan_id):
+        print("ID do scan inválido para gravação local.")
+        return False
+    files = [
+        (f"relatorio_{scan_id}.json", lambda: json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")),
+        (f"relatorio_{scan_id}.txt", lambda: render_text(report).encode("utf-8")),
+    ]
+    # O --output explícito conserva o comportamento de salvar a captura aprovada.
+    for item in (captures or []) if not private else ():
+        if item.get("filename") == f"prova_{scan_id}.png" and item.get("content_type") == "image/png":
+            files.append((item["filename"], lambda image=item: base64.b64decode(image["content"], validate=True)))
+    success = True
+    for filename, encode in files:
+        path = destination / filename
+        try:
+            _write_private(path, encode())
+            print(f"Salvo neste aparelho: {path}")
+        except (OSError, KeyError, TypeError, ValueError):
+            success = False
+            print(f"Falha ao salvar {filename}. Confira espaço e permissão da pasta.")
+    return success
+
+
+def deliver(report, captures, direct):
+    """Obtém a imagem pública somente após a confirmação de envio."""
+    identity = next((m.get("data", {}) for m in report.get("modules", [])
+                     if m.get("module") == "M2" and m.get("status") in {"OK", "PARCIAL"}), {})
+    uid = identity.get("userId")
+    avatar = None
+    if type(uid) is int and identity.get("profile_url") == f"https://www.roblox.com/users/{uid}/profile":
+        avatar = fetch_headshot(uid)
+    token = "" if direct else os.environ.get("WARP_SESSION_TOKEN") or getpass.getpass("Token privado da sessão (não é o código do perfil): ")
+    try:
+        if avatar:
+            try:
+                message_body = envelope(report, captures, avatar)
+            except ValueError:
+                message_body = envelope(report, captures)
+        else:
+            message_body = envelope(report, captures)
+        success, message = send(message_body, token=token, direct=direct)
+        print(message)
+        return success
+    except (OSError, ValueError, TypeError):
+        print("O envio não foi confirmado. Confira a configuração com a staff.")
+        return False
+
+
+def finish_report(report, captures, args):
+    saved = True
+    if not args.test or args.output:
+        saved = save_report(report, args.output, captures)
+    delivered = True
+    if args.test or args.dry_run:
+        print("Sem envio: modo de teste ou dry-run.")
+        if args.dry_run:
+            print(json.dumps(envelope(report), ensure_ascii=False, indent=2))
+    else:
+        ui.step(10, "Envio opcional")
+        if ui.yes_no("Confirma enviar este relatório minimizado ao Discord da staff?"):
+            delivered = deliver(report, captures, args.direct)
+    return 0 if saved and delivered else 1
 
 
 def main(argv=None):
@@ -159,7 +255,7 @@ def main(argv=None):
     add_locations(ctx,modules)
     modules=review.apply(modules,ctx)
     report=build(ctx,modules,integrity,synthetic=args.test)
-    report["discord_identity"]=discord_identity(args.discord_user) if consent.get("discord") else {"status":"NÃO VERIFICADO"}
+    report["discord_identity"]=discord_identity(args.discord_user, args.discord_id) if consent.get("discord") else {"status":"NÃO VERIFICADO"}
     captures=[]
     if not (args.test or args.dry_run) and consent.get("screenshot"):
         from warp_scanner import capture
@@ -171,26 +267,10 @@ def main(argv=None):
     if args.plain or "NO_COLOR" in os.environ or "utf" not in (sys.stdout.encoding or "").lower():
         console_report=console_report.replace(ui.UNICODE_BANNER,ui.ASCII_BANNER)
     print(console_report)
-    if args.output:
-        save_report(report,args.output,captures)
-    if args.test or args.dry_run:
-        print("Sem envio: modo de teste ou dry-run.")
-        if args.dry_run:
-            print(json.dumps(envelope(report),ensure_ascii=False,indent=2))
-    else:
-        ui.step(10,"Envio opcional")
-        if ui.yes_no("Confirma enviar este relatório minimizado ao Discord da staff?"):
-            token="" if args.direct else os.environ.get("WARP_SESSION_TOKEN") or getpass.getpass("Token privado da sessão (não é o código do perfil): ")
-            success,message=send(envelope(report,captures),token=token,direct=args.direct)
-            del token
-            print(message)
-            if not success and not args.output and ui.yes_no("Deseja salvar o relatório localmente?"):
-                destination=input("Diretório para salvar JSON/TXT: ").strip()
-                if destination:
-                    save_report(report,Path(destination).expanduser(),captures)
+    exit_code = finish_report(report, captures, args)
     print("Remova o código do perfil. Desative a depuração sem fio após a call.")
     ui.banner(args.plain)
-    return 0
+    return exit_code
 
 
 if __name__=="__main__":

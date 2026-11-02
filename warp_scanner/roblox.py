@@ -53,7 +53,7 @@ def package_info(ctx, package):
         data.update(verified=True, present=False)
     elif re.search(r"Package\s*\[" + re.escape(package) + r"\]", text):
         data.update(verified=True, present=True)
-        for field in ("versionName", "firstInstallTime", "lastUpdateTime", "installerPackageName"):
+        for field in ("versionName", "firstInstallTime", "lastUpdateTime"):
             match = re.search(r"(?m)^\s*" + field + r"=([^\r\n]+)", text)
             if match:
                 data[field] = match.group(1).strip()[:128]
@@ -61,9 +61,20 @@ def package_info(ctx, package):
         if users:
             data["installed_profiles"] = sum(flag == "true" for _, flag in users)
             data["present"] = any(flag == "true" for _, flag in users)
-        installer = re.search(r"installerPackageName=([a-zA-Z0-9_.]+)", text)
-        if installer:
-            data["installerPackageName"] = installer.group(1)
+        # O dump moderno mantém firstInstallTime por usuário, o antigo por pacote.
+        # Nunca vincular a data de outro perfil a eventos do perfil principal.
+        if package == PACKAGE and ("0", "true") in users:
+            sections = re.split(r"(?m)^[ \t]*User (\d+):", text)
+            if "0" in sections[1::2]:
+                index = next(i for i in range(1, len(sections), 2) if sections[i] == "0")
+                stamp = re.search(r"(?m)^\s*firstInstallTime=(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\s*$", sections[index + 1])
+                if not stamp and len(users) == 1:
+                    stamp = re.search(r"(?m)^\s*firstInstallTime=(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\s*$", sections[0])
+                if stamp:
+                    data["owner_first_install"] = stamp[1]
+        installer = re.search(r"(?m)^\s*installerPackageName=([a-zA-Z0-9_.]+)[ \t]*$", text)
+        if installer and PACKAGE_RE.fullmatch(installer[1]):
+            data["installerPackageName"] = installer[1]
     else:
         data["reason"] = "Resposta de pacote indisponível ou formato não reconhecido."
     del text
@@ -134,7 +145,9 @@ def collect(ctx):
         except OSError:
             pass
     data["directory_metadata"] = remnants
-    checks.append({"name": "Reinstalação e eventos anteriores", "requires": "adb", "status": "NÃO VERIFICADO", "reason": "Dumps globais de uso/logcat/bugreport são omitidos para não ler dados de outros apps; datas isoladas não provam reinstalação."})
+    checks.append({"name": "Data de instalação no perfil principal", "requires": info.get("requires", "none"),
+                   "status": "OK" if info.get("owner_first_install") else "NÃO VERIFICADO",
+                   "reason": "M9 cruza a data do perfil principal com o histórico filtrado de uso do Roblox."})
     if ctx.privilege.get("root"):
         meta = []
         for suffix in ("", "/files", "/cache"):

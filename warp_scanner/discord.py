@@ -48,7 +48,7 @@ def send(envelope, token="", direct=False, sleep=time.sleep):
     with_image = any(f.get("content_type") == "image/png" for f in envelope.get("attachments",[]))
     if with_image and not direct:
         headers["X-Warp-Evidence"]="png"
-    if len(body)>(5854552 if with_image else 262144):
+    if len(body)>(6553604 if with_image else 262144):
         return False,"Relatório excedeu limite de envio; salve localmente para revisão"
     for attempt in range(3):
         try:

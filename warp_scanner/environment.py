@@ -1,16 +1,44 @@
 """M6: configuração técnica, sem armazenar servidores, contas ou IDs do aparelho."""
+from datetime import date
 import re
-from .roblox import PACKAGE_RE, package_info, query, requirements
+from .roblox import PACKAGE_RE, package_info, query
+
+
+def device_info(ctx):
+    """Lê somente propriedades públicas de produto, individualmente (nunca getprop sem filtro)."""
+    props = {"brand": "ro.product.brand", "model": "ro.product.model",
+             "android": "ro.build.version.release", "security_patch": "ro.build.version.security_patch",
+             "api_level": "ro.build.version.sdk"}
+    device = {}
+    for field, prop in props.items():
+        result = ctx.run(["getprop", prop], timeout=3, max_bytes=1024)
+        value = result.text.strip()
+        if not result.ok or not value or value.casefold() in {"null", "unknown", "none"}:
+            continue
+        if field == "api_level":
+            if re.fullmatch(r"[1-9][0-9]{0,2}", value):
+                device[field] = int(value)
+        elif field == "security_patch":
+            try:
+                if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+                    device[field] = date.fromisoformat(value).isoformat()
+            except ValueError:
+                continue
+        elif field == "android":
+            if re.fullmatch(r"[0-9]{1,2}(?:\.[0-9]{1,2}){0,2}[A-Za-z]?", value):
+                device[field] = value
+        elif len(value) <= 96 and all(ch.isprintable() for ch in value):
+            device[field] = value
+    return device
 
 
 def collect(ctx):
     findings, checks = [], []
-    device = {}
-    for field, prop in {"brand": "ro.product.brand", "model": "ro.product.model", "android": "ro.build.version.release", "security_patch": "ro.build.version.security_patch"}.items():
-        result = ctx.run(["getprop", prop], timeout=3, max_bytes=1024)
-        if result.ok and result.text.strip():
-            device[field] = result.text.strip()[:96]
-    checks.append({"name": "Modelo e versão Android", "requires": "none", "status": "OK" if device else "NÃO VERIFICADO", "reason": "Somente marca/modelo/Android/patch; sem IMEI, serial, MAC ou IDs."})
+    device = device_info(ctx)
+    complete = all(key in device for key in ("brand", "model", "android", "security_patch"))
+    checks.append({"name": "Modelo e versão Android", "requires": "none",
+                   "status": "OK" if complete else "PARCIAL" if device else "NÃO VERIFICADO",
+                   "reason": "Propriedades públicas de marca, modelo, versão, nível da API e patch de segurança."})
     emulator = []
     for prop, values in (("ro.kernel.qemu", {"1"}), ("ro.hardware", {"goldfish", "ranchu"})):
         result = ctx.run(["getprop", prop], timeout=3, max_bytes=1024)
@@ -28,11 +56,13 @@ def collect(ctx):
         ("global", "auto_time_zone", "fuso automático desativado", lambda value: value == "0"),
     ]
     states = {}
+    observed = {}
     for namespace, key, label, predicate in rules:
         result, cap, failures = query(ctx, ["settings", "get", namespace, key], timeout=3, max_bytes=4096)
         if result and result.ok and not re.search(r"(?i)(exception|permission|error)", result.text):
             value = result.text.strip()
-            if value not in ("", "null", "None"):
+            if value in ("0", "1"):
+                observed[key] = value == "1"
                 active = bool(predicate(value))
                 states[label] = active
                 if active:
@@ -70,4 +100,6 @@ def collect(ctx):
         {"name": "Device admin e fontes desconhecidas", "requires": "adb", "status": "NÃO VERIFICADO", "reason": "Interfaces variam por fabricante. VPN, DNS e proxy são cobertos em M11."},
         {"name": "Bootloader e SELinux", "requires": "none", "status": "PARCIAL", "reason": "Indicadores aparecem na sonda de privilégios; propriedades podem ser ocultadas/adulteradas."},
     ])
-    return {"module": "M6", "requires": "none", "status": "PARCIAL", "reason": "Configurações são contexto técnico, não prova de uso de cheats.", "findings": findings, "data": {"device": device, "settings": states}, "checks": checks}
+    return {"module": "M6", "requires": "none", "status": "PARCIAL", "reason": "Configurações são contexto técnico, não prova de uso de cheats.", "findings": findings,
+            "data": {"device": device, "settings": states, "usb_debug": observed.get("adb_enabled"),
+                     "auto_time": observed.get("auto_time")}, "checks": checks}

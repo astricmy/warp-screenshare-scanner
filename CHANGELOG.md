@@ -1,5 +1,12 @@
 # Histórico
 
+## 0.2.0 — relatório e cópia no aparelho
+
+- Embed em português, com os rótulos do modelo WARP, link de perfil numérico, avatar público opcional, quatro achados principais e detalhes de cobertura. A pontuação fica no JSON.
+- Cópia local automática em TXT e JSON, inclusive quando o jogador recusa o envio ou o relay está indisponível. A captura da tela continua opcional e exige revisão.
+- Marca, modelo, Android, patch, nível de API, depuração USB e hora automática quando acessíveis. Campos não verificáveis mostram N/A; sinais de uso anterior e instalação recente são cruzados no mesmo perfil.
+- O relay aceita o avatar junto da captura aprovada, restringe links e menções e verifica os limites de texto e de imagem.
+
 ## 0.1.0 — versão preliminar
 
 - Scanner modular com consentimento e cobertura explícita.

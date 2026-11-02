@@ -27,8 +27,8 @@ export default {
       if (header !== null && header !== "png") return reply(400, "Tipo de evidência inválido.");
       const stats = {};
       const value = await readBoundedJSON(request, header ? MAX_WIRE_BYTES : MAX_BYTES, stats);
-      const claimedImage = value?.attachments?.[2];
-      const imageChars = claimedImage?.content_type === "image/png" && typeof claimedImage.content === "string" ? claimedImage.content.length : 0;
+      const files = Array.isArray(value?.attachments) ? value.attachments : [];
+      const imageChars = files.slice(2, 4).reduce((n, f) => n + (f?.content_type === "image/png" && typeof f.content === "string" ? f.content.length : 0), 0);
       if (stats.bytes - imageChars > MAX_BYTES) return reply(413, "Relatório textual excede 256 KiB.");
       const report = validateReport(value, claims);
       const png = report.attachments[2];

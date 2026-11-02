@@ -55,7 +55,10 @@ def consent_screen():
     Não acessamos credenciais, conversas, contatos, mídia, documentos pessoais,
     histórico de teclado, bancos privados ou identificadores do aparelho.
     Não recuperamos arquivos apagados. Nenhum script encontrado é executado.
-    O aparelho não é alterado pelo scan. Salvar um relatório exige sua escolha.
+    Ao concluir, o scanner salva os relatórios JSON e TXT na pasta privada
+    ~/.local/share/warp-screenshare/relatorios ou na pasta escolhida com --output.
+    Só após a confirmação do envio, o scanner tenta anexar ao Discord a imagem
+    pública do avatar do Roblox. O avatar não é salvo no aparelho.
     Recusar qualquer etapa será registrado como NÃO VERIFICADO.
     """))
     if input("Digite ACEITO para continuar: ").strip() != "ACEITO":

@@ -3,22 +3,32 @@ import datetime as dt
 import re
 import time
 
-from .roblox import PACKAGE, query
+from .roblox import PACKAGE, package_info, parse_install_time, query
 
 HOUR_MS = 3_600_000
 WINDOW_MS = 72 * HOUR_MS
 # Programa fixo, sem interpolação. O Android filtra pelo pacote. O sh projeta
-# somente datas, transições e instanceId da primeira seção de eventos.
+# somente datas, transições e instanceId do perfil principal (mesmo armazenamento do scanner).
 # Não persiste ID de atividade, classe, nomes de outros apps nem linhas brutas.
 EVENT_PROJECTION = r'''set -f
 dumpsys usagestats -c com.roblox.client | while IFS= read -r line; do
   case "$line" in
+    user=*)
+      [ "$active" = 1 ] && break
+      set -- $line
+      owner=0
+      [ "$1" = user=0 ] && owner=1
+      ;;
     *"hour events ("*"beginTime="*"endTime="*)
+      [ "$owner" = 1 ] || continue
       [ "$active" = 1 ] && break
       active=1
       b= e=
-      for f in $line; do case "$f" in beginTime=*) b=$f;; endTime=*) e=$f;; esac; done
-      printf 'R %s %s\n' "${b#beginTime=}" "${e#endTime=}" | tr -d ')'
+      range=${line#*beginTime=}
+      set -- $range
+      b=$1
+      for f in $range; do case "$f" in endTime=*) e=$f;; esac; done
+      printf 'R %s %s\n' "$b" "${e#endTime=}" | tr -d ')'
       ;;
     *"In-memory "*) [ "$active" = 1 ] && break ;;
     *"package=com.roblox.client "*)
@@ -100,8 +110,24 @@ def observed_usage(projected, now_ms):
     return {"janela_solicitada_h": 72, "inicio_janela_ms": now_ms - WINDOW_MS,
             "fim_janela_ms": now_ms, "inicio_observado_ms": start, "fim_observado_ms": end,
             "segundos_pareados_observados": elapsed // 1000, "intervalos_pareados": len(intervals),
+            "primeiro_inicio_pareado_ms": min((a for a, _ in intervals), default=None),
             "transicoes_incompletas": gaps, "total_exato_72h": None,
             "interpretacao": "Tempo das sessões completas observáveis, limitado à janela. Nenhuma extrapolação para os dias ausentes."}
+
+
+def reinstall_status(info, usage, now):
+    installed = parse_install_time(info.get("owner_first_install"))
+    if not info.get("present") or not installed or not 1_230_768_000 <= installed.timestamp() <= now:
+        return {"value": None, "reason": "data de instalação do perfil principal indisponível"}
+    result = {"value": None, "reason": "instalação recente; uso anterior indeterminado",
+              "firstInstallTime": installed.isoformat()}
+    if now - installed.timestamp() >= WINDOW_MS / 1000:
+        result.update(value=False, reason="instalação registrada há pelo menos 72 h")
+    elif usage:
+        first = usage.get("primeiro_inicio_pareado_ms")
+        if first is not None and first < int(installed.timestamp() * 1000):
+            result.update(value=True, reason="reinstalação provável: uso anterior no mesmo perfil")
+    return result
 
 
 def collect(ctx):
@@ -135,8 +161,9 @@ def collect(ctx):
                     if usage:
                         break
     data["uso_roblox"] = usage
+    data["reinstall"] = reinstall_status(package_info(ctx, PACKAGE), usage, now)
     checks.append(_check("Uso do Roblox nas últimas 72 h", "PARCIAL" if usage else "NÃO VERIFICADO",
-                         "Tempo de atividade do primeiro perfil com seção de eventos. AOSP normalmente expõe até 24 h; períodos ausentes ficam desconhecidos."
+                         "Tempo de atividade no perfil principal. AOSP normalmente expõe até 24 h; períodos ausentes ficam desconhecidos."
                          if usage else "Eventos específicos com intervalo e instâncias verificáveis indisponíveis.", cap))
     return {"module": "M9", "requires": "none", "status": "PARCIAL" if data["marcos"] or usage else "NÃO VERIFICADO",
             "reason": "Marcos e uso observado contextualizam a análise e não geram pontos.",

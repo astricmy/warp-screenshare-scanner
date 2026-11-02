@@ -35,7 +35,7 @@ O jogador informa `--session-code WARP-7K3Q` no scanner e fornece o token privad
 
 ## Protocolo do cliente
 
-`POST https://<worker>/report`, `Content-Type: application/json`, cabeçalho `Authorization: Bearer <token>`. O limite é 256 KiB para o corpo inteiro, verificado durante a leitura mesmo sem `Content-Length`. Não são aceitos corpos comprimidos, parâmetros de query ou campos desconhecidos no envelope/embeds.
+`POST https://<worker>/report` recebe JSON com o cabeçalho `Authorization: Bearer <token>`. Relatórios sem imagens têm limite de 256 KiB para o corpo inteiro. Quando houver PNGs, envie também `X-Warp-Evidence: png`. O limite passa a 6.553.604 bytes e a parte textual continua limitada a 256 KiB. O Worker conta os bytes durante a leitura mesmo quando a requisição não declara o tamanho.
 
 ```json
 {
@@ -59,9 +59,16 @@ O jogador informa `--session-code WARP-7K3Q` no scanner e fornece o token privad
 }
 ```
 
-O exemplo é sintético; não funciona sem um token válido. `scan_id` deve ser UUID v4. São exigidos exatamente dois anexos, JSON e TXT. O JSON deve repetir `scan_id` e `session_code`; seu conteúdo técnico é produzido pelo scanner, e não é uma prova de autenticidade do aparelho. Títulos/URLs de embed aceitam apenas perfis Roblox; miniaturas aceitam apenas HTTPS em `rbxcdn.com` e subdomínios, sem credenciais ou query. Os limites de 10 embeds, 6000 caracteres agregados, 25 campos, 1024 por campo e 4096 por descrição são validados.
+O exemplo mostra a estrutura mínima do envelope. O scanner produz a apresentação completa e os relatórios legíveis nos dois primeiros anexos, JSON e TXT. O JSON deve repetir o UUID v4 do scan e o código público da sessão.
 
-O servidor fixa `username = "WARP SCREENSHARE"` e `allowed_mentions = {"parse":[]}`. Apenas `embeds` pode ser fornecido para apresentação (as duas propriedades fixas podem ser enviadas, mas só com os valores esperados). Nenhum cliente escolhe webhook, thread Discord, conteúdo livre, menções, URLs de imagem arbitrárias ou anexos extras. O encaminhamento usa `multipart/form-data` com `payload_json` e `files[0..1]`.
+O resumo admite 3800 caracteres na descrição. Cada embed de detalhes admite 4096. O Worker confere o máximo de 10 embeds, 6000 caracteres no conjunto, 25 campos por embed e 1024 caracteres no valor de cada campo. A contagem usa unidades UTF-16. O link de perfil precisa apontar para o mesmo ID numérico no título e na descrição da primeira embed. URLs de origem no texto de achados devem ficar em spans de código. O rodapé admite o convite fixo da marca. O relay rejeita menções e fixa `allowed_mentions = {"parse":[]}` e `username = "WARP SCREENSHARE"`.
+
+Após JSON e TXT podem vir os seguintes anexos opcionais, em qualquer ordem. Cada objeto usa `filename`, `content_type: "image/png"` e `content` em base64 padrão.
+
+- **Avatar público.** O scanner obtém a imagem de perfil do Roblox e inclui `avatar.png`. A primeira embed deve ter `url` do perfil e `thumbnail.url = "attachment://avatar.png"`. A miniatura pode ter até 512 KiB e 512 × 512 px. O Worker verifica estrutura, dimensões, CRCs e a quantidade de dados descomprimidos do PNG. Quando a consulta do avatar falha, o scanner omite tanto a miniatura quanto o anexo.
+- **Evidência revisada.** Uma captura de tela de até 4 MiB usa o nome `prova_<scan_id>.png`. O Worker confere o consentimento e a revisão registrados no JSON, o ID do achado, as dimensões, o tamanho e o SHA-256 da imagem. O jogador precisa conferir a tela inteira no visualizador antes de autorizar o anexo, inclusive notificações ou outros dados visíveis.
+
+O encaminhamento ao Discord usa `multipart/form-data` com `payload_json` e um campo `files[n]` por arquivo. Os PNGs seguem como bytes binários. As mesmas cotas, prazo de sessão e regra de idempotência valem para envios com e sem imagens.
 
 ## Limites, repetição e falhas
 

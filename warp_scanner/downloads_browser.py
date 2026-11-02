@@ -39,7 +39,7 @@ def collect(ctx):
     domains = _domains(ctx.signatures)
     since = int((dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=ctx.args.window_days)).timestamp() * 1000)
     tested = 0
-    completed = False
+    completed = 0
     required = requirements(ctx)
     if required in ("root", "adb") and domains:
         # Filtragem no provedor, ANTES do retorno. Falhas de schema são cobertura parcial.
@@ -57,7 +57,7 @@ def collect(ctx):
             tested += 1
             if not result or not result.ok or re.search(r"(?i)(error|exception|permission|unknown column|not found)", result.text):
                 break
-            completed = True
+            completed += 1
             for row in parse_download_rows(result.text, domains, since):
                 key = row["domain"], row["timestamp_ms"]
                 if key in seen:
@@ -67,7 +67,8 @@ def collect(ctx):
                 stamp = dt.datetime.fromtimestamp(row["timestamp_ms"] / 1000, dt.timezone.utc).isoformat()
                 findings.append(ctx.finding("M5", "download", "Origem de download coincide com domínio da base", {"domain": row["domain"], "time": stamp, "signature_id": entry.get("id"), "signature_verified": entry.get("verificado") is True,
                     "limite": "Domínio não validado é apenas indício; download não comprova execução."}, "PROVÁVEL" if entry.get("verificado") else "INDÍCIO", "probable" if entry.get("verificado") else "hint", cap, time=stamp))
-    checks.append({"name": "Origens de download filtradas pelo provedor", "requires": "adb", "status": "PARCIAL" if completed else "NÃO VERIFICADO", "reason": "Consultas filtradas por domínio e janela, somente domínio e data retidos. Colunas/permissões variam por fabricante; limite de 80 domínios." if completed else "Provedor indisponível, acesso negado ou sem capacidade ADB/root. Nenhum dump completo foi feito."})
+    all_queried = bool(domains) and len(domains) <= 80 and completed == (len(domains) + 9) // 10
+    checks.append({"name": "Origens de download filtradas pelo provedor", "requires": "adb", "status": "OK" if all_queried else "PARCIAL" if completed else "NÃO VERIFICADO", "reason": "Consultas filtradas por domínio e janela, somente domínio e data retidos. Colunas/permissões variam por fabricante; limite de 80 domínios." if completed else "Provedor indisponível, acesso negado ou base sem domínios. Nenhum dump completo foi feito."})
     checks.extend([
         {"name": "Histórico do navegador", "requires": "root", "status": "NÃO VERIFICADO", "reason": "Conferir manualmente na call. Bancos de histórico não são copiados, pois podem conter dados pessoais fora da blocklist."},
         {"name": "Typosquatting e títulos de páginas", "requires": "root", "status": "NÃO VERIFICADO", "reason": "Sem histórico completo; correspondências aproximadas não são prova e não ampliam a coleta."},

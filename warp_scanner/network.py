@@ -563,7 +563,7 @@ def collect(ctx):
         add("CA de usuário junto de proxy ou túnel ativo", {"certificados": len(data["ca_usuario"]), "local": "Configurações › Segurança › Credenciais", "limite": "Uma CA instalada pode não participar da conexão."}, "PROVÁVEL", "network_ca_proxy")
     for app in data["apps_de_rede"]:
         residual = app["estado"].startswith("registro residual")
-        add("Ferramenta de rede na consulta de pacotes", {**app, "local": "Configurações › Apps"}, weight="hint" if residual else "network_app")
+        add("Ferramenta de rede na consulta de pacotes", {**app, "local": "Configurações › Apps"}, level="INDÍCIO" if residual else "PROVÁVEL", weight="hint" if residual else "network_app")
     for title, evidence, level, weight in active_issues:
         add(title, evidence, level, weight)
     if data["endpoints_roblox"]:

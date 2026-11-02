@@ -13,6 +13,7 @@ work/
 reports/
 relatorio_*.json
 relatorio_*.txt
+prova_*.png
 *.log
 *.db
 *.sqlite*

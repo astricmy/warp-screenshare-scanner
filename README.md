@@ -14,17 +14,17 @@ python scan.py --test --plain
 
 No celular, instale o Termux e o aplicativo complementar Termux:API pela mesma fonte. O pacote de terminal `termux-api` e o aplicativo Android correspondente são necessários para usar o clipboard pelo Termux. [Instalação oficial do Termux](https://github.com/termux/termux-app#installation) · [Termux:API](https://github.com/termux/termux-api)
 
-Com o release `v0.1.0` disponível, esta linha instala o comando `warp-scan` no Termux:
+Com o release `v0.2.0` disponível, esta linha instala o comando `warp-scan` no Termux:
 
 ```sh
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.1.0/install.sh | bash
+pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.0/install.sh | bash
 ```
 
 Para inspecionar o instalador primeiro:
 
 ```sh
 pkg install -y curl
-curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.1.0/install.sh
+curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.0/install.sh
 less install.sh
 bash install.sh
 warp-scan --test
@@ -40,7 +40,7 @@ A instalação padrão inclui `aapt` para identificar o aplicativo no manifesto 
 2. Execute `warp-scan --nick SEU_NICK --session-code WARP-7K3Q`. Para consultar o Android pelo ADB local, acrescente `--adb` e siga o guia de depuração sem fio. Mantenha o Roblox aberto em segundo plano para consultar seus processos.
 3. O jogador lê a tela inicial e escolhe separadamente as permissões para arquivos, clipboard, identificação Discord, testes ativos de rede e captura da tela. O nome de usuário do Discord é autodeclarado. A verificação de posse pelo código da descrição vale para o perfil do Roblox.
 4. Revise os achados, os caminhos Android, os horários, as fontes, a cobertura e os dados que seguirão nos anexos. Uma captura, quando autorizada, exige revisão da imagem inteira antes do envio.
-5. Confirme o envio e insira o token privado no prompt protegido. Se o relay falhar, o scanner oferece salvar o relatório. Ao terminar, remova o código da descrição e desligue a depuração sem fio. [Guia de ADB do Android](https://developer.android.com/tools/adb)
+5. O scanner mostra onde salvou os arquivos no aparelho. Se quiser compartilhar, confirme o envio e insira o token privado da sessão. Ao terminar, remova o código da descrição e desligue a depuração sem fio. [Guia de ADB do Android](https://developer.android.com/tools/adb)
 
 | Opção | Efeito |
 |---|---|
@@ -52,8 +52,8 @@ A instalação padrão inclui `aapt` para identificar o aplicativo no manifesto 
 | `--max-file-kb N` | Limite de texto/Lua por arquivo, padrão de 512 KiB |
 | `--max-files N`, `--max-seconds N` | Limites da caminhada e da análise de arquivos |
 | `--nick`, `--expected-nick`, `--session-code` | Perfil e sessão esperados pela staff |
-| `--discord-user` | Nome do Discord oferecido pelo jogador, incluído após consentimento |
-| `--output DIRETORIO` | Grava explicitamente JSON, TXT e eventual imagem aprovada |
+| `--discord` ou `--discord-user`, `--discord-id` | Nome e ID opcional informados pela pessoa, sem verificação de posse; não acessa o app Discord |
+| `--output DIRETORIO` | Escolhe a pasta dos relatórios e salva ali a eventual captura aprovada; em `--test`, permite guardar a demonstração |
 | `--direct` | Modo de bancada, requer `WARP_WEBHOOK_URL` no ambiente |
 
 ## Cobertura e interpretação
@@ -79,6 +79,12 @@ Os achados de arquivo exibem o caminho observado, por exemplo `/storage/emulated
 Os pesos estão em `settings.json`. Correspondências exatas validadas têm mais peso que nomes ou configuração de risco. A faixa **INCONCLUSIVO (cobertura parcial)** preserva a incerteza quando a pontuação é baixa e faltam módulos críticos. **CONFIRMADO** se refere ao objeto identificado, como um certificado diferente ou uma ferramenta de interceptação reconhecida. A decisão sobre o uso de cheats exige revisão humana.
 
 ## Configurar o Discord
+
+Ao fim de uma verificação consentida, o Termux guarda `relatorio_<id>.txt` (para leitura) e `relatorio_<id>.json` (dados estruturados) em `~/.local/share/warp-screenshare/relatorios/`. O terminal mostra os caminhos completos. Isso também funciona em `--dry-run`, sem relay configurado, se o envio falhar ou se o jogador preferir não compartilhar. Para listar as cópias, use `ls -lt ~/.local/share/warp-screenshare/relatorios/`. A imagem de evidência só é gravada junto das cópias se tiver sido aprovada e a pasta tiver sido indicada com `--output`.
+
+A embed branca começa pelo perfil Roblox, Discord informado, marca e modelo, versão do Android e patch de segurança. Em seguida aparecem root, veredito, os quatro achados mais graves com suas localizações, clipboard, downloads, rede, autenticidade do Roblox, uso observado nas últimas 72 h e reinstalação. As embeds pretas detalham evidências, horários e cobertura. Um campo que não pôde ser verificado aparece como **N/A** com o motivo. O tempo observado não é extrapolado para preencher lacunas.
+
+Quando há perfil identificado e o envio é autorizado, o scanner tenta anexar o avatar público como `avatar.png` pela [API de thumbnails do Roblox](https://create.roblox.com/docs/cloud/reference/domains/thumbnails). Falha nessa etapa deixa a mensagem sem imagem. Os IDs numéricos explícitos do perfil e do Discord informado são distintos de identificadores privados do telefone. IPs, MAC e SSID não aparecem nos relatórios textuais; uma captura aprovada deve ser conferida pelo jogador.
 
 O telefone envia o relatório ao Worker da staff por HTTPS. O Worker valida um token HMAC com expiração, controla as tentativas por IP e código e repassa ao Discord embeds, JSON, TXT e eventual imagem autorizada. Configure `DISCORD_WEBHOOK_URL` e `SESSION_SECRET` como segredos do Worker. No celular, configure `WARP_RELAY_URL` com a origem HTTPS do relay. O endereço não está definido no projeto. [Exemplo completo, instalação e protocolo do Worker](worker/README.md)
 
