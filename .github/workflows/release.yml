@@ -1,0 +1,49 @@
+name: Validar e publicar release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/release-tag']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: warp-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar scanner e relay
+        run: |
+          python -m unittest discover -s tests
+          python scan.py --test --plain
+          node --test worker/test/*.test.mjs
+          bash -n install.sh
+          python tools/check_secrets.py
+      - name: Empacotar e conferir manifesto versionado
+        run: |
+          python tools/build_release.py
+          git diff --exit-code -- checksums.txt
+      - name: Publicar os arquivos verificados
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(cat .github/release-tag)"
+          test "$tag" = "$(python -c 'import config; print(config.RELEASE_TAG)')"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "O release já existe; os arquivos publicados serão preservados."
+          else
+            gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "WARP SCREENSHARE $tag — preliminar" --prerelease --notes-file CHANGELOG.md
+          fi

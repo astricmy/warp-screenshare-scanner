@@ -1,0 +1,6 @@
+{
+  "weights": {"confirmed":100,"probable":40,"hint":10,"root":20,"reinstall":25,"removed":50,"overlay":15,"cleanup":20,"script_loader":45,"script_executor":55,"script_clipboard":30,"obfuscation":10,"identity_mismatch":40,"network_proxy":35,"network_known":100,"network_ca_proxy":40,"network_app":35,"network_vpn":10,"network_dns":5,"network_profile":15},
+  "thresholds": {"suspect":25,"high_risk":60},
+  "max_findings":100,"max_file_kb":512,"max_files":2000,"max_seconds":30,
+  "window_days":14,"max_payload_bytes":262144
+}

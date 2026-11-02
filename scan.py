@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+"""Ponto de entrada WARP. Nenhuma coleta antecede ACEITO."""
+import argparse
+import base64
+import getpass
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+import config
+from warp_scanner.core import Context, unavailable
+from warp_scanner import ui
+from warp_scanner.safety import iter_allowed_files
+from warp_scanner.integrity import collect_integrity, load_signatures
+from warp_scanner.report import build, render_text, envelope
+from warp_scanner.discord import send
+from warp_scanner.locations import add_locations
+
+
+def positive(value):
+    number=int(value)
+    if not 1 <= number <= 100000:
+        raise argparse.ArgumentTypeError("Informe um número entre 1 e 100000")
+    return number
+
+
+def arguments(argv=None):
+    parser=argparse.ArgumentParser(description="WARP SCREENSHARE — análise estática com consentimento")
+    for flag,help_text in [("test","Dados fictícios em memória; sem coleta nem rede"),("dry-run","Coleta consentida; mostra relatório sem enviar"),("plain","Terminal em ASCII e sem cores"),("adb","Guia de pareamento ADB no próprio celular"),("direct","Envio direto explícito para bancada da staff")]:
+        parser.add_argument("--"+flag,action="store_true",help=help_text)
+    parser.add_argument("--window-days",type=positive,default=14)
+    parser.add_argument("--max-file-kb",type=positive,default=512)
+    parser.add_argument("--max-files",type=positive,default=2000)
+    parser.add_argument("--max-seconds",type=positive,default=30)
+    parser.add_argument("--session-code",default="")
+    parser.add_argument("--nick",default="")
+    parser.add_argument("--expected-nick",default="")
+    parser.add_argument("--discord-user",default="",help="Nome do Discord informado pelo jogador, incluído apenas com consentimento")
+    parser.add_argument("--output",type=Path,help="Diretório explícito para salvar os relatórios minimizados")
+    parser.add_argument("--version",action="version",version=config.VERSION)
+    args=parser.parse_args(argv)
+    args.adb_serial=None
+    args.adb_connected=False
+    if args.session_code and not re.fullmatch(r"WARP-[A-Z0-9]{4,24}",args.session_code):
+        parser.error("Código deve seguir WARP- seguido por 4 a 24 letras maiúsculas/números")
+    if args.max_file_kb>8192 or args.max_seconds>300 or args.max_files>20000 or args.window_days>365:
+        parser.error("Limites máximos: 8192 KB, 300 segundos, 20000 arquivos e 365 dias")
+    return args
+
+
+def synthetic_modules(ctx):
+    from warp_scanner.scripts_clipboard import analyze_text
+    specimen='loadstring(game:HttpGet("https://raw.githubusercontent.com/warp-fixture/demo/main/test.lua?discard=1"))() getgenv()'
+    result=analyze_text(specimen,ctx.signatures)
+    if not result:
+        raise RuntimeError("Amostra sintética não detectada")
+    finding=ctx.finding("M8","scripts","DEMONSTRAÇÃO: padrão em amostra fictícia",{"caminho":"Download/exemplo.lua","padroes":result["padroes"],"trecho":result["trecho"],"urls":result["urls"]},result["level"],result["weight_key"])
+    modules=[unavailable(f"M{i}","Simulação: aparelho não consultado") for i in range(1,8)]
+    modules[1]["data"]={"nick":"JogadorExemplo","displayName":"Exemplo fictício","ownership_verified":False}
+    modules.append({"module":"M8","requires":"none","status":"PARCIAL","reason":"Fixture em memória, sem arquivos reais nem clipboard","data":{},"findings":[finding],"checks":[{"name":"Fixture Lua","requires":"none","status":"OK","reason":"Análise estática em memória"}]})
+    modules.extend(unavailable(m,"Simulação: aparelho e rede não consultados") for m in ("M9","M10","M11"))
+    return modules
+
+
+def save_report(report, destination, captures=None):
+    destination.mkdir(parents=True,exist_ok=True)
+    # Arquivos de relatório são uma saída explicitamente autorizada, não temporários ocultos.
+    for item in envelope(report,captures)["attachments"]:
+        path=destination/item["filename"]
+        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+        with os.fdopen(fd,"wb") as stream:
+            if item["content_type"]=="image/png":
+                stream.write(base64.b64decode(item["content"],validate=True))
+            else:
+                stream.write(item["content"].encode("utf-8"))
+    print("Relatórios e anexos aprovados salvos no diretório escolhido.")
+
+
+def main(argv=None):
+    args=arguments(argv)
+    if hasattr(sys.stdout,"reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+    ui.banner(args.plain)
+    if not args.test and os.name!="posix":
+        print("Coleta disponível somente no Android/Termux. Use --test neste computador.")
+        return 2
+    consent=dict.fromkeys(("clipboard","files","discord","screenshot","network_tests"),False) if args.test else ui.consent_screen()
+    if consent is None:
+        print("Consentimento recusado. Nenhum dado foi coletado.")
+        ui.banner(args.plain)
+        return 0
+    if not args.test and not Path("/system/bin/getprop").is_file():
+        print("A coleta real requer Android/Termux. Use --test para a demonstração.")
+        return 2
+    settings=json.loads((config.BASE_DIR/"settings.json").read_text(encoding="utf-8"))
+    if args.test:
+        signatures=json.loads((config.BASE_DIR/"signatures.json").read_text(encoding="utf-8"))
+        signatures_status="Base local; teste sem rede"
+        signatures_digest=""
+    else:
+        # A sonda deve ocorrer antes da atualização ou qualquer outra coleta.
+        signatures=json.loads((config.BASE_DIR/"signatures.json").read_text(encoding="utf-8"))
+    ctx=Context(args,signatures,settings,consent,config.STORAGE_ROOT)
+    if args.test:
+        args.session_code=args.session_code or "WARP-TESTE"
+        modules=synthetic_modules(ctx)
+        integrity={"status":"SIMULAÇÃO — sem verificação remota"}
+    else:
+        from warp_scanner import privilege, roblox, identity, cheats, traces, downloads_browser, environment, processes, scripts_clipboard, device_history, authenticity, network
+        if args.adb:
+            ui.adb_guide(args)
+        ui.step(2,"Privilégios")
+        try:
+            ctx.privilege=privilege.privilege_probe(ctx)
+        except Exception:
+            ctx.privilege.update(classification="NÃO VERIFICADO", mode="PADRÃO")
+        print(f"{ctx.privilege['classification']} | {ctx.privilege['mode']}")
+        if ctx.privilege.get("root"):
+            print("ALERTA: root confirmado; consultas privilegiadas restritas a metadados autorizados.")
+        signatures,signatures_status,signatures_digest=load_signatures(config.BASE_DIR,local_only=args.dry_run)
+        ctx.signatures=signatures
+        if not args.nick:
+            args.nick=input("Nickname público no Roblox (Enter para não verificar): ").strip()
+        if consent.get("discord") and not args.discord_user:
+            args.discord_user=input("Seu nome de usuário do Discord (Enter para omitir): ").strip()
+        if not args.session_code:
+            code=input("Código público da sessão fornecido pela staff (WARP-...): ").strip()
+            args.session_code=code if re.fullmatch(r"WARP-[A-Z0-9]{4,24}",code) else ""
+        if args.session_code:
+            print("Coloque o código da sessão temporariamente na descrição pública do perfil.")
+            input("Pressione Enter quando estiver pronto para consultar o perfil: ")
+        ui.step(3,"Arquivos e integridade")
+        try:
+            ctx.files=list(iter_allowed_files(ctx.storage,signatures,args.max_files,args.max_seconds,ctx.file_stats))
+        except (OSError, ValueError):
+            ctx.file_stats["errors"]=True
+        integrity=collect_integrity(config.BASE_DIR)
+        integrity.update(base_source=signatures_status,active_base_sha256=signatures_digest)
+        modules=[]
+        for step_no,title,collectors in [(4,"Roblox e perfis",[(roblox,"M1"),(identity,"M2")]),(5,"Executores e rastros",[(cheats,"M3"),(traces,"M4")]),(6,"Downloads e ambiente",[(downloads_browser,"M5"),(environment,"M6")]),(7,"Processos, histórico e autenticidade",[(processes,"M7"),(device_history,"M9"),(authenticity,"M10")]),(8,"Scripts, clipboard e rede",[(scripts_clipboard,"M8"),(network,"M11")])]:
+            ui.step(step_no,title)
+            for collector,module_id in collectors:
+                try:
+                    result=collector.collect(ctx)
+                except Exception:
+                    result=unavailable(module_id,"Coleta falhou; detalhes brutos descartados para preservar privacidade")
+                modules.append(result)
+                print(f"{module_id}: {result['status']}")
+        if ctx.privilege.get("classification") in {"ROOT_CONFIRMADO","ROOT_SUSPEITO"}:
+            root_finding=ctx.finding("M6","privilégio","Root confirmado" if ctx.privilege.get("root") else "Indicadores de root sem confirmação",{"status":ctx.privilege["classification"],"observacao":"Root não comprova uso de cheat"},"INDÍCIO","root" if ctx.privilege.get("root") else "hint")
+            next(m for m in modules if m["module"]=="M6")["findings"].append(root_finding)
+        if any(m.get("data",{}).get("credential_warning") for m in modules):
+            print("Possível credencial encontrada no conteúdo autorizado. Conteúdo redigido; troque a senha e encerre sessões se houve exposição.")
+    ui.step(9,"Resumo e revisão")
+    from warp_scanner import review
+    from warp_scanner.identity import discord_identity
+    add_locations(ctx,modules)
+    modules=review.apply(modules,ctx)
+    report=build(ctx,modules,integrity,synthetic=args.test)
+    report["discord_identity"]=discord_identity(args.discord_user) if consent.get("discord") else {"status":"NÃO VERIFICADO"}
+    captures=[]
+    if not (args.test or args.dry_run) and consent.get("screenshot"):
+        from warp_scanner import capture
+        try:
+            captures=capture.review(ctx,report)
+        except (OSError, ValueError):
+            report["capture"]={"status":"NÃO VERIFICADO","reason":"Captura ou revisão indisponível"}
+    console_report=render_text(report)
+    if args.plain or "NO_COLOR" in os.environ or "utf" not in (sys.stdout.encoding or "").lower():
+        console_report=console_report.replace(ui.UNICODE_BANNER,ui.ASCII_BANNER)
+    print(console_report)
+    if args.output:
+        save_report(report,args.output,captures)
+    if args.test or args.dry_run:
+        print("Sem envio: modo de teste ou dry-run.")
+        if args.dry_run:
+            print(json.dumps(envelope(report),ensure_ascii=False,indent=2))
+    else:
+        ui.step(10,"Envio opcional")
+        if ui.yes_no("Confirma enviar este relatório minimizado ao Discord da staff?"):
+            token="" if args.direct else os.environ.get("WARP_SESSION_TOKEN") or getpass.getpass("Token privado da sessão (não é o código do perfil): ")
+            success,message=send(envelope(report,captures),token=token,direct=args.direct)
+            del token
+            print(message)
+            if not success and not args.output and ui.yes_no("Deseja salvar o relatório localmente?"):
+                destination=input("Diretório para salvar JSON/TXT: ").strip()
+                if destination:
+                    save_report(report,Path(destination).expanduser(),captures)
+    print("Remova o código do perfil. Desative a depuração sem fio após a call.")
+    ui.banner(args.plain)
+    return 0
+
+
+if __name__=="__main__":
+    try:
+        sys.exit(main())
+    except (KeyboardInterrupt,EOFError):
+        print("\nOperação encerrada. Nenhum envio adicional. Desative a depuração sem fio.")
+        sys.exit(130)
+    except Exception:
+        print("Falha de configuração ou gravação. Nenhum detalhe sensível foi exibido.")
+        sys.exit(1)

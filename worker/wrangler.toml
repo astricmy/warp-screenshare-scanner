@@ -1,0 +1,21 @@
+name = "warp-screenshare-relay"
+main = "src/index.js"
+compatibility_date = "2026-10-29"
+workers_dev = true
+
+# Segredos são cadastrados com `wrangler secret put`, nunca neste arquivo.
+[[durable_objects.bindings]]
+name = "QUOTAS"
+class_name = "Quota"
+
+[[durable_objects.bindings]]
+name = "DELIVERIES"
+class_name = "Delivery"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Quota", "Delivery"]
+
+# Não registrar cabeçalhos, corpos, tokens, IPs nem respostas do Discord.
+[observability]
+enabled = false

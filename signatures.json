@@ -1,0 +1,1191 @@
+{
+  "schema_version": 1,
+  "version": "2026.10.29-seed",
+  "updated_at": "2026-10-29",
+  "notice": "Todas as sementes estão desativadas para confirmação automática. Nomes genéricos não são evidência isolada. Nenhum pacote, certificado ou hash foi inventado.",
+  "roblox": {
+    "package": "com.roblox.client",
+    "official_certificates_sha256": [
+      "44932ea35a17a267372d71b54d1a0cb3da0dca5113e94406ae2fe18090ba1477",
+      "2bebd189e8d3106401347056c93d045b61e20e22d0c3cbed85474aeb00a3d12a",
+      "14e882b1f73754660305b1e55030f76fe6b2353f46c4e593d569933e95bcf7c3",
+      "294f2c821d5bca5bcb0aa560048e2ecf78a42df2858d06a365ea5b7445b00940",
+      "7b0482fb612bd9c87084d6fa48f1c7baa7f1a22f471220cba7f6428dfb75462e"
+    ],
+    "source": "https://www.roblox.com/.well-known/assetlinks.json — com.roblox.client, consultado em 2026-11-02. Referências positivas, não exaustivas."
+  },
+  "proxy_mitm": {
+    "versao": 1,
+    "apps": [
+      {"nome":"PCAPdroid","pacote":"com.emanuelef.remote_capture","verificado":true,"fonte":"https://github.com/emanuele-f/PCAPdroid/blob/master/docs/app_api.md","atualizado_em":"2026-11-02"},
+      {"nome":"HTTP Toolkit","pacote":"tech.httptoolkit.android.v1","verificado":true,"fonte":"https://github.com/httptoolkit/httptoolkit-android/blob/master/app/build.gradle.kts","atualizado_em":"2026-11-02"}
+    ],
+    "emissores": [
+      {"nome":"mitmproxy","valor":"mitmproxy","verificado":true,"fonte":"https://github.com/mitmproxy/mitmproxy/blob/main/mitmproxy/certs.py","atualizado_em":"2026-11-02"}
+    ],
+    "infraestrutura": [],
+    "intervalos_roblox": [],
+    "nota":"A validação identifica a ferramenta. O nome do emissor é reproduzível e não comprova uso no jogo. Infraestrutura e intervalos exigem referências revisadas pela staff."
+  },
+  "entries": [
+    {
+      "id": "delta",
+      "nome": "Delta Executor",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Delta Executor"
+      ],
+      "dominios": [
+        "deltaexecutor.co",
+        "deltaexecutor.net",
+        "deltaexecutor.gg",
+        "delta-executor.com",
+        "delta-executor.org",
+        "delta-executor.it.com",
+        "delta-executor.dev",
+        "deltadevs.net"
+      ],
+      "pastas": [
+        "DeltaExecutor",
+        "delta-executor"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "arceus-x",
+      "nome": "Arceus X / Arceus X Neo",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Arceus X / Arceus X Neo"
+      ],
+      "dominios": [
+        "arceusx.net"
+      ],
+      "pastas": [
+        "ArceusX",
+        "ArceusXNeo"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "fluxus",
+      "nome": "Fluxus",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Fluxus"
+      ],
+      "dominios": [
+        "fluxus.team",
+        "fluxus-team.com",
+        "fluxus-team.net",
+        "getfluxusexecutor.com",
+        "fluxus.mobi",
+        "flux.li",
+        "fluxteam.net"
+      ],
+      "pastas": [
+        "FluxusExecutor"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "codex",
+      "nome": "Codex / Code X",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Codex / Code X"
+      ],
+      "dominios": [
+        "codex.lol"
+      ],
+      "pastas": [
+        "CodexExecutor"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "hydrogen",
+      "nome": "Hydrogen / Hydrogen M",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Hydrogen / Hydrogen M"
+      ],
+      "dominios": [
+        "hydrogen.sh",
+        "hydrogen.us.com",
+        "hydrogenexecutor.com"
+      ],
+      "pastas": [
+        "HydrogenExecutor"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "krnl",
+      "nome": "KRNL",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "KRNL"
+      ],
+      "dominios": [
+        "krnl.place",
+        "krnl.vip",
+        "krnl.ca"
+      ],
+      "pastas": [
+        "KRNLExecutor"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "vega-x",
+      "nome": "Vega X",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Vega X"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "cryptic",
+      "nome": "Cryptic",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Cryptic"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "nebula",
+      "nome": "Nebula",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Nebula"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "cubix",
+      "nome": "Cubix",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Cubix"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "trigon-trigon-evo",
+      "nome": "Trigon / Trigon Evo",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Trigon / Trigon Evo"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "kronos",
+      "nome": "Kronos",
+      "categoria": "executor_mobile",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Kronos"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-xeno",
+      "nome": "Xeno",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Xeno"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-solara",
+      "nome": "Solara",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Solara"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-wave",
+      "nome": "Wave",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Wave"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-potassium",
+      "nome": "Potassium",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Potassium"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-volt",
+      "nome": "Volt",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Volt"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-argon",
+      "nome": "Argon",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Argon"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-luna",
+      "nome": "Luna",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Luna"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-celery",
+      "nome": "Celery",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Celery"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-jjsploit",
+      "nome": "JJSploit",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "JJSploit"
+      ],
+      "dominios": [
+        "wearedevs.net"
+      ],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-synapse-x",
+      "nome": "Synapse X",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Synapse X"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-script-ware",
+      "nome": "Script-Ware",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Script-Ware"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-electron",
+      "nome": "Electron",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Electron"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-krystal",
+      "nome": "Krystal",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Krystal"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "pc-sentinel",
+      "nome": "Sentinel",
+      "categoria": "executor_pc",
+      "plataformas": [
+        "windows",
+        "emulador"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Sentinel"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "gameguardian",
+      "nome": "GameGuardian",
+      "categoria": "editor_memoria",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "GameGuardian"
+      ],
+      "dominios": [],
+      "pastas": [
+        "GameGuardian"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "lucky-patcher",
+      "nome": "Lucky Patcher",
+      "categoria": "patcher",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Lucky Patcher"
+      ],
+      "dominios": [],
+      "pastas": [
+        "LuckyPatcher"
+      ],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "clonadores",
+      "nome": "Clonadores / espaços virtuais",
+      "categoria": "clonador",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Clonadores / espaços virtuais"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "autoclickers",
+      "nome": "Autoclickers / macros",
+      "categoria": "automacao",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Autoclickers / macros"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "magisk",
+      "nome": "Magisk",
+      "categoria": "root",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Magisk"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "kernelsu",
+      "nome": "KernelSU",
+      "categoria": "root",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "KernelSU"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "apatch",
+      "nome": "APatch",
+      "categoria": "root",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "APatch"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "supersu",
+      "nome": "SuperSU",
+      "categoria": "root",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "SuperSU"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "lsposed",
+      "nome": "LSPosed / Xposed",
+      "categoria": "injecao",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "LSPosed / Xposed"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "zygisk",
+      "nome": "Zygisk",
+      "categoria": "injecao",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Zygisk"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "shizuku",
+      "nome": "Shizuku",
+      "categoria": "adb",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Shizuku"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    },
+    {
+      "id": "cheat-engine",
+      "nome": "Cheat Engine",
+      "categoria": "editor_memoria",
+      "plataformas": [
+        "android"
+      ],
+      "pacotes": [],
+      "rotulos": [
+        "Cheat Engine"
+      ],
+      "dominios": [],
+      "pastas": [],
+      "arquivos": [],
+      "hashes_apk": [],
+      "certificados_sha256": [],
+      "tokens_contextuais": [
+        "executor",
+        "script",
+        "roblox",
+        "apk"
+      ],
+      "confianca": "baixa",
+      "verificado": false,
+      "fonte": "Sementes fornecidas na especificação v2.2; domínios não revalidados e sem atribuição de oficialidade.",
+      "atualizado_em": "2026-10-29"
+    }
+  ],
+  "scripts": {
+    "funcoes_executor": [
+      "loadstring",
+      "game:HttpGet",
+      "HttpGetAsync",
+      "getgenv",
+      "getrenv",
+      "getreg",
+      "getgc",
+      "hookfunction",
+      "hookmetamethod",
+      "newcclosure",
+      "checkcaller",
+      "getrawmetatable",
+      "setreadonly",
+      "fireclickdetector",
+      "firetouchinterest",
+      "fireproximityprompt",
+      "identifyexecutor",
+      "getexecutorname",
+      "setclipboard",
+      "queue_on_teleport",
+      "http_request",
+      "syn.request",
+      "writefile",
+      "readfile",
+      "isfile",
+      "makefolder",
+      "listfiles",
+      "Drawing.new",
+      "getconnections",
+      "gethui",
+      "decompile",
+      "saveinstance",
+      "setfpscap"
+    ],
+    "bibliotecas_gui": [
+      "Rayfield",
+      "Orion",
+      "Kavo",
+      "Fluent",
+      "Linoria",
+      "Infinite Yield",
+      "Dex",
+      "SimpleSpy",
+      "Redz Hub",
+      "Speed Hub"
+    ],
+    "ofuscadores": [
+      "Luraph",
+      "MoonSec",
+      "IronBrew"
+    ],
+    "hosts_script": [
+      "raw.githubusercontent.com",
+      "gist.githubusercontent.com",
+      "github.com",
+      "gitlab.com",
+      "pastebin.com",
+      "pastefy.app",
+      "paste.ee",
+      "rentry.co",
+      "scriptblox.com",
+      "rscripts.net"
+    ],
+    "repos_bloqueados": [],
+    "hashes_script": [],
+    "urls_bloqueadas": [],
+    "note": "Hosts compartilhados e bibliotecas GUI, sozinhos, não são achados. Entradas de hash/repositório usam {value, verificado, fonte, atualizado_em}; apenas verificado=true pode gerar correspondência confirmada."
+  }
+}

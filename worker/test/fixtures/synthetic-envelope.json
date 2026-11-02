@@ -1,0 +1,77 @@
+{
+  "session_code": "WARP-TESTE",
+  "scan_id": "2c69d331-c498-489d-9a3d-961316bc953a",
+  "payload": {
+    "embeds": [
+      {
+        "title": "WARP SCREENSHARE • Relatório de Verificação",
+        "color": 8421504,
+        "timestamp": "2026-10-30T15:45:43.866808+00:00",
+        "description": "SUSPEITO (cobertura parcial) | 55 pontos\nPADRÃO | SEM_ROOT\nEvidências técnicas não comprovam uso de cheat. Decisão final da staff; sem punição automática.",
+        "fields": [
+          {
+            "name": "Jogador",
+            "value": "JogadorExemplo | Exemplo fictício | userId=—"
+          },
+          {
+            "name": "Perfil no Roblox",
+            "value": "NÃO VERIFICADO"
+          },
+          {
+            "name": "Posse verificada",
+            "value": "Não"
+          },
+          {
+            "name": "Dispositivo",
+            "value": "{}"
+          },
+          {
+            "name": "Roblox",
+            "value": "{}"
+          },
+          {
+            "name": "Achados por severidade",
+            "value": "{'PROVÁVEL': 1}"
+          }
+        ],
+        "footer": {
+          "text": "WARP SCREENSHARE • https://discord.gg/pthFZGupmH"
+        }
+      },
+      {
+        "title": "Achados (até 10; detalhes nos anexos)",
+        "description": "PROVÁVEL • DEMONSTRAÇÃO: padrão em amostra fictícia • 2026-10-30T15:45:43.866808+00:00\n{\"caminho\": \"Download/exemplo.lua\", \"padroes\": [\"loadstring\", \"game:HttpGet\", \"getgenv\"], \"trecho\": \" … ver anexo"
+      },
+      {
+        "title": "Cobertura e integridade",
+        "description": "M1: NÃO VERIFICADO (none)\nM2: NÃO VERIFICADO (none)\nM3: NÃO VERIFICADO (none)\nM4: NÃO VERIFICADO (none)\nM5: NÃO VERIFICADO (none)\nM6: NÃO VERIFICADO (none)\nM7: NÃO VERIFICADO (none)\nM8: PARCIAL (none)",
+        "fields": [
+          {
+            "name": "Identificação",
+            "value": "Scan: 2c69d331-c498-489d-9a3d-961316bc953a\nSessão: WARP-TESTE\nVersão: 0.1.0"
+          },
+          {
+            "name": "Consentimentos",
+            "value": "{'clipboard': False, 'files': False}"
+          },
+          {
+            "name": "Integridade",
+            "value": "{\"status\": \"SIMULAÇÃO — sem verificação remota\"}"
+          }
+        ]
+      }
+    ]
+  },
+  "attachments": [
+    {
+      "filename": "relatorio_2c69d331-c498-489d-9a3d-961316bc953a.json",
+      "content": "{\n  \"scan_id\": \"2c69d331-c498-489d-9a3d-961316bc953a\",\n  \"session_code\": \"WARP-TESTE\",\n  \"timestamp\": \"2026-10-30T15:45:43.866808+00:00\",\n  \"version\": \"0.1.0\",\n  \"synthetic\": true,\n  \"verdict\": \"SUSPEITO (cobertura parcial)\",\n  \"score\": 55,\n  \"partial_coverage\": true,\n  \"notice\": \"Evidências técnicas não comprovam uso de cheat. Decisão final da staff; sem punição automática.\",\n  \"consent\": {\n    \"clipboard\": false,\n    \"files\": false\n  },\n  \"privilege\": {\n    \"root\": false,\n    \"adb\": false,\n    \"mode\": \"PADRÃO\",\n    \"classification\": \"SEM_ROOT\",\n    \"indicators\": []\n  },\n  \"integrity\": {\n    \"status\": \"SIMULAÇÃO — sem verificação remota\"\n  },\n  \"findings\": [\n    {\n      \"id\": \"2c37ec86-faa2-4ea6-8652-0154f28aa1f1\",\n      \"module\": \"M8\",\n      \"category\": \"scripts\",\n      \"description\": \"DEMONSTRAÇÃO: padrão em amostra fictícia\",\n      \"evidence\": {\n        \"caminho\": \"Download/exemplo.lua\",\n        \"padroes\": [\n          \"loadstring\",\n          \"game:HttpGet\",\n          \"getgenv\"\n        ],\n        \"trecho\": \"Padrões: loadstring, game:HttpGet, getgenv; https://raw.githubusercontent.com/warp-fixture/demo/main/test.lua\",\n        \"urls\": [\n          \"https://raw.githubusercontent.com/warp-fixture/demo/main/test.lua\"\n        ]\n      },\n      \"level\": \"PROVÁVEL\",\n      \"weight\": 55,\n      \"time\": \"2026-10-30T15:45:43.866808+00:00\",\n      \"requires\": \"none\"\n    }\n  ],\n  \"findings_omitted\": 0,\n  \"modules\": [\n    {\n      \"module\": \"M1\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"M1\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M2\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {\n        \"nick\": \"JogadorExemplo\",\n        \"displayName\": \"Exemplo fictício\",\n        \"ownership_verified\": false\n      },\n      \"checks\": [\n        {\n          \"name\": \"M2\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M3\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"M3\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M4\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"M4\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M5\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"M5\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M6\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"M6\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M7\",\n      \"requires\": \"none\",\n      \"status\": \"NÃO VERIFICADO\",\n      \"reason\": \"Simulação: aparelho não consultado\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"M7\",\n          \"requires\": \"none\",\n          \"status\": \"NÃO VERIFICADO\",\n          \"reason\": \"Simulação: aparelho não consultado\"\n        }\n      ]\n    },\n    {\n      \"module\": \"M8\",\n      \"requires\": \"none\",\n      \"status\": \"PARCIAL\",\n      \"reason\": \"Fixture em memória, sem arquivos reais nem clipboard\",\n      \"data\": {},\n      \"checks\": [\n        {\n          \"name\": \"Fixture Lua\",\n          \"requires\": \"none\",\n          \"status\": \"OK\",\n          \"reason\": \"Análise estática em memória\"\n        }\n      ]\n    }\n  ],\n  \"timeline\": [\n    {\n      \"time\": \"2026-10-30T15:45:43.866808+00:00\",\n      \"module\": \"M8\",\n      \"description\": \"DEMONSTRAÇÃO: padrão em amostra fictícia\"\n    }\n  ],\n  \"timeline_note\": \"Horário da coleta quando a fonte não fornece data do evento; proximidade temporal não implica causalidade.\"\n}",
+      "content_type": "application/json"
+    },
+    {
+      "filename": "relatorio_2c69d331-c498-489d-9a3d-961316bc953a.txt",
+      "content": "╔══════════════════════════════════╗\n║         WARP SCREENSHARE         ║\n╚══════════════════════════════════╝\n   https://discord.gg/pthFZGupmH\n\nRELATÓRIO SINTÉTICO — TESTE\nID: 2c69d331-c498-489d-9a3d-961316bc953a\nSessão: WARP-TESTE\nData UTC: 2026-10-30T15:45:43.866808+00:00\nResultado: SUSPEITO (cobertura parcial) | Pontuação: 55\nEvidências técnicas não comprovam uso de cheat. Decisão final da staff; sem punição automática.\n\nCONSENTIMENTO\n{\"clipboard\": false, \"files\": false}\n\nPRIVILÉGIOS\n{\n  \"root\": false,\n  \"adb\": false,\n  \"mode\": \"PADRÃO\",\n  \"classification\": \"SEM_ROOT\",\n  \"indicators\": []\n}\n\nINTEGRIDADE\n{\n  \"status\": \"SIMULAÇÃO — sem verificação remota\"\n}\n\nACHADOS\n[PROVÁVEL] M8 +55 DEMONSTRAÇÃO: padrão em amostra fictícia\n{\"caminho\": \"Download/exemplo.lua\", \"padroes\": [\"loadstring\", \"game:HttpGet\", \"getgenv\"], \"trecho\": \"Padrões: loadstring, game:HttpGet, getgenv; https://raw.githubusercontent.com/warp-fixture/demo/main/test.lua\", \"urls\": [\"https://raw.githubusercontent.com/warp-fixture/demo/main/test.lua\"]}\nHorário: 2026-10-30T15:45:43.866808+00:00 | requires: none\n\nCOBERTURA E METADADOS\nM1 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M1: NÃO VERIFICADO | none | Simulação: aparelho não consultado\nM2 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M2: NÃO VERIFICADO | none | Simulação: aparelho não consultado\n{\n  \"nick\": \"JogadorExemplo\",\n  \"displayName\": \"Exemplo fictício\",\n  \"ownership_verified\": false\n}\nM3 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M3: NÃO VERIFICADO | none | Simulação: aparelho não consultado\nM4 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M4: NÃO VERIFICADO | none | Simulação: aparelho não consultado\nM5 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M5: NÃO VERIFICADO | none | Simulação: aparelho não consultado\nM6 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M6: NÃO VERIFICADO | none | Simulação: aparelho não consultado\nM7 [NÃO VERIFICADO] requires=none: Simulação: aparelho não consultado\n  M7: NÃO VERIFICADO | none | Simulação: aparelho não consultado\nM8 [PARCIAL] requires=none: Fixture em memória, sem arquivos reais nem clipboard\n  Fixture Lua: OK | none | Análise estática em memória\n\nLINHA DO TEMPO\nHorário da coleta quando a fonte não fornece data do evento; proximidade temporal não implica causalidade.\n2026-10-30T15:45:43.866808+00:00 | M8 | DEMONSTRAÇÃO: padrão em amostra fictícia\n\nRemova o código do perfil e desative a depuração sem fio.\n",
+      "content_type": "text/plain"
+    }
+  ]
+}
