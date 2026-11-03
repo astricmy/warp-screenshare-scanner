@@ -41,8 +41,8 @@ def consent_screen():
     Também serão examinados o certificado do Roblox, os sinais de instalação do
     Android e o tempo de uso do Roblox nas últimas 72 horas, quando disponível.
     Proxy, VPN, DNS, perfis de rede e certificados acessíveis serão verificados.
-    Os achados incluem o caminho Android dos arquivos autorizados. Você pode
-    informar seu usuário do Discord ou seguir sem incluí-lo.
+    Com ADB pareado, você pode autorizar uma leitura da tela Minha conta de
+    cada app. Só o campo de nome de usuário é retido. Não é preciso digitar o nick.
     O nickname informado será consultado na API pública oficial do Roblox;
     a descrição pública será usada apenas para verificar o código da sessão.
     Após autorizações separadas, texto/Lua e o clipboard atual serão
@@ -65,7 +65,7 @@ def consent_screen():
         return None
     return {"clipboard":yes_no("Autoriza uma leitura do clipboard atual?"),
             "files":yes_no("Autoriza ler texto/Lua nas pastas permitidas para análise local?"),
-            "discord":yes_no("Quer incluir seu usuário do Discord no relatório?"),
+            "discord":yes_no("Autoriza incluir seu nick do Discord se identificável?"),
             "network_tests":yes_no("Autoriza testes de DNS do sistema, DNS sobre HTTPS público e TLS com servidores públicos do Roblox?"),
             "screenshot":yes_no("Quer a opção de revisar e anexar uma captura real de um achado?")}
 

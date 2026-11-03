@@ -17,6 +17,9 @@ def discord_identity(username, user_id=""):
 
 
 def collect(ctx):
+    if getattr(ctx.args, "visible_roblox", None):
+        return {"module":"M2","requires":"adb","status":"PARCIAL","reason":"Nick observado na tela de conta; posse não verificada.",
+                "data":{"nick":ctx.args.visible_roblox,"source":"tela da conta"},"findings":[],"checks":[]}
     nick = ctx.args.nick
     if not nick or not re.fullmatch(r"[A-Za-z0-9_]{3,20}",nick):
         return unavailable("M2","Nickname ausente ou inválido")

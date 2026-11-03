@@ -135,6 +135,12 @@ def save_report(report, destination=None, captures=None):
 
 def deliver(report, captures, direct):
     """Obtém a imagem pública somente após a confirmação de envio."""
+    if not direct and not os.environ.get("WARP_RELAY_URL", config.RELAY_URL):
+        print("Discord indisponível: a staff ainda precisa configurar o endereço de entrega (WARP_RELAY_URL).")
+        return False
+    if not direct and not report.get("session_code"):
+        print("Discord indisponível: inicie com --session-code e o código WARP fornecido pela staff.")
+        return False
     identity = next((m.get("data", {}) for m in report.get("modules", [])
                      if m.get("module") == "M2" and m.get("status") in {"OK", "PARCIAL"}), {})
     uid = identity.get("userId")
@@ -179,6 +185,10 @@ def main(argv=None):
     if hasattr(sys.stdout,"reconfigure"):
         sys.stdout.reconfigure(errors="replace")
     ui.banner(args.plain)
+    if args.test:
+        print("DEMONSTRAÇÃO com dados fictícios. Para verificar o aparelho, execute warp-scan --adb sem --test.")
+    elif not args.dry_run and not args.direct and not os.environ.get("WARP_RELAY_URL", config.RELAY_URL):
+        print("Verificação local disponível. Envio ao Discord indisponível: o endereço de entrega da staff não está configurado.")
     if not args.test and os.name!="posix":
         print("Coleta disponível somente no Android/Termux. Use --test neste computador.")
         return 2
@@ -217,14 +227,15 @@ def main(argv=None):
             print("ALERTA: root confirmado; consultas privilegiadas restritas a metadados autorizados.")
         signatures,signatures_status,signatures_digest=load_signatures(config.BASE_DIR,local_only=args.dry_run)
         ctx.signatures=signatures
-        if not args.nick:
-            args.nick=input("Nickname público no Roblox (Enter para não verificar): ").strip()
-        if consent.get("discord") and not args.discord_user:
-            args.discord_user=input("Seu nome de usuário do Discord (Enter para omitir): ").strip()
+        from warp_scanner.account_screen import observe
+        args.visible_roblox = None if args.nick else observe(ctx, "Roblox", ui.yes_no)
+        args.visible_discord = observe(ctx, "Discord", ui.yes_no) if consent.get("discord") and not args.discord_user else None
+        if not ctx.privilege.get("adb") and not args.nick:
+            print("Leitura automática do nick indisponível sem ADB local. Para tentar, use warp-scan --adb.")
         if not args.session_code:
             code=input("Código público da sessão fornecido pela staff (WARP-...): ").strip()
             args.session_code=code if re.fullmatch(r"WARP-[A-Z0-9]{4,24}",code) else ""
-        if args.session_code:
+        if args.session_code and args.nick:
             print("Coloque o código da sessão temporariamente na descrição pública do perfil.")
             input("Pressione Enter quando estiver pronto para consultar o perfil: ")
         ui.step(3,"Arquivos e integridade")
@@ -256,6 +267,8 @@ def main(argv=None):
     modules=review.apply(modules,ctx)
     report=build(ctx,modules,integrity,synthetic=args.test)
     report["discord_identity"]=discord_identity(args.discord_user, args.discord_id) if consent.get("discord") else {"status":"NÃO VERIFICADO"}
+    if getattr(args, "visible_discord", None):
+        report["discord_identity"]={"status":"OBSERVADO", "username":args.visible_discord}
     captures=[]
     if not (args.test or args.dry_run) and consent.get("screenshot"):
         from warp_scanner import capture

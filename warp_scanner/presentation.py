@@ -153,6 +153,8 @@ def overview(report, top=4):
     if url:
         name = span(identity["nick"])
         lines.append(f"👤 **Roblox User:** {name} • [🔗 Perfil]({url}) (ID {fixed(identity['userId'])})")
+    elif identity.get("source") == "tela da conta":
+        lines.append("👤 **Roblox User:** " + span(identity["nick"]) + " • observado na tela da conta")
     else:
         lines.append("👤 **Roblox User:** ➖ **N/A** — não identificado")
     ownership = {"verificada":"✅ **verificada**", "não confere":"⚠️ **não confere**"}
@@ -161,9 +163,10 @@ def overview(report, top=4):
     if discord.get("username"):
         did = str(discord.get("id", ""))
         tag = " (ID " + fixed(did) + ")" if re.fullmatch(r"[1-9][0-9]{16,19}", did) else ""
-        lines.append(f"💬 **Discord User:** {span(discord['username'],32)}{tag} • 📝 informado (não verificado)")
+        source = "observado na tela da conta" if discord.get("status") == "OBSERVADO" else "📝 informado (não verificado)"
+        lines.append(f"💬 **Discord User:** {span(discord['username'],32)}{tag} • {source}")
     else:
-        lines.append("💬 **Discord User:** ➖ **N/A** — não informado")
+        lines.append("💬 **Discord User:** ➖ **N/A** — não identificado")
     model = " ".join(str(device[k]) for k in ("brand", "model") if device.get(k))
     patch = device.get("security_patch", "")
     patch = fixed(patch) if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", patch) else "N/A"

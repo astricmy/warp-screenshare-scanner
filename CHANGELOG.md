@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.2.1 — sessão real no Termux
+
+- A demonstração indica como iniciar uma verificação real. A falta de endereço de entrega é informada antes do scan e não gera pedido de token.
+- O fluxo padrão tenta ler somente o nick visível em Minha conta do Roblox e do Discord com ADB e autorização. Fontes indisponíveis ficam sem identificação.
+
 ## 0.2.0 — relatório e cópia no aparelho
 
 - Embed em português, com os rótulos do modelo WARP, link de perfil numérico, avatar público opcional, quatro achados principais e detalhes de cobertura. A pontuação fica no JSON.
