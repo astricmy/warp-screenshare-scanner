@@ -2,8 +2,8 @@
 set -euo pipefail
 umask 077
 REPO="astricmy/warp-screenshare-scanner"
-TAG="v0.2.2"
-VERSION="0.2.2"
+TAG="v0.2.3"
+VERSION="0.2.3"
 printf '%s\n' 'WARP SCREENSHARE — instalação transparente' \
   'Vou instalar python, curl, android-tools, termux-api, aapt e apksigner pelo pkg.' \
   'apksigner usa Java. Execute bash install.sh --leve para omitir os dois verificadores de APK.' \

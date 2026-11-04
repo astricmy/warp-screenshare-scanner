@@ -24,8 +24,27 @@ def step(number, title):
     print(f"[{number}/10] [{'#'*number}{'.'*(10-number)}] {title}")
 
 
+PLAIN = False
+
+
+def question(prompt):
+    if not PLAIN and sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM") != "dumb":
+        prompt = "\033[1;93m" + prompt + "\033[0m"
+    return input(prompt).strip().casefold()
+
+
+def choice(prompt, positive, negative):
+    while True:
+        answer = question(prompt)
+        if answer in positive:
+            return True
+        if answer in negative:
+            return False
+        print("Resposta não reconhecida. Tente novamente.")
+
+
 def yes_no(prompt):
-    return input(prompt + " (s/n): ").strip().lower() == "s"
+    return choice(prompt + " (s/n): ", {"s", "sim"}, {"n", "não", "nao"})
 
 
 def consent_screen():
@@ -61,7 +80,7 @@ def consent_screen():
     pública do avatar do Roblox. O avatar não é salvo no aparelho.
     Recusar qualquer etapa será registrado como NÃO VERIFICADO.
     """))
-    if input("Digite ACEITO para continuar: ").strip() != "ACEITO":
+    if not choice("Digite ACEITO para continuar ou RECUSO para sair: ", {"aceito", "s", "sim"}, {"recuso", "n", "não", "nao"}):
         return None
     return {"clipboard":yes_no("Autoriza uma leitura do clipboard atual?"),
             "files":yes_no("Autoriza ler texto/Lua nas pastas permitidas para análise local?"),

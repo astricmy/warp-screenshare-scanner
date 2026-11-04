@@ -1,6 +1,6 @@
 {
   "name": "warp-screenshare-relay",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "scripts": { "test": "node --test test/*.test.mjs", "session": "node generate-session.mjs" },

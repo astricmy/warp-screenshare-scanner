@@ -128,7 +128,7 @@ test("quota atômica limita chamadas concorrentes", async () => {
   assert.equal(responses.filter(r => r.status === 200).length, 10);
 });
 test("entrega repetida do mesmo scan é idempotente", async t => {
-  let calls = 0; t.mock.method(globalThis, "fetch", async (_url, init) => { calls++; assert.equal(init.redirect, "error"); const payload = JSON.parse(init.body.get("payload_json")); assert.deepEqual(payload.allowed_mentions, { parse: [] }); return new Response("{}", { status: 200 }); });
+  let calls = 0; t.mock.method(globalThis, "fetch", async (_url, init) => { calls++; assert.equal(init.redirect, "manual"); const payload = JSON.parse(init.body.get("payload_json")); assert.deepEqual(payload.allowed_mentions, { parse: [] }); return new Response("{}", { status: 200 }); });
   const d = new Delivery(context(), environment()); const data = report();
   assert.equal((await d.fetch(deliveryRequest(data))).status, 200);
   const second = await d.fetch(deliveryRequest(data)); assert.equal(second.status, 200); assert.equal((await second.json()).duplicate, true); assert.equal(calls, 1);

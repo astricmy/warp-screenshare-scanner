@@ -187,12 +187,16 @@ def finish_report(report, captures, args):
     else:
         ui.step(10, "Envio opcional")
         if ui.yes_no("Confirma enviar este relatório minimizado ao Discord da staff?"):
+            print("Envio autorizado. Enviando ao Discord…")
             delivered = deliver(report, captures, args.direct)
+        else:
+            print("Você escolheu não enviar. Nenhum relatório foi enviado ao Discord.")
     return 0 if saved and delivered else 1
 
 
 def main(argv=None):
     args=arguments(argv)
+    ui.PLAIN = args.plain
     if hasattr(sys.stdout,"reconfigure"):
         sys.stdout.reconfigure(errors="replace")
     ui.banner(args.plain)

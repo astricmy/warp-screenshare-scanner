@@ -14,17 +14,17 @@ python scan.py --test --plain
 
 No celular, instale o Termux e o aplicativo complementar Termux:API pela mesma fonte. O pacote de terminal `termux-api` e o aplicativo Android correspondente são necessários para usar o clipboard pelo Termux. [Instalação oficial do Termux](https://github.com/termux/termux-app#installation) · [Termux:API](https://github.com/termux/termux-api)
 
-Com o release `v0.2.2` disponível, esta linha instala o comando `warp-scan` no Termux:
+Com o release `v0.2.3` disponível, esta linha instala o comando `warp-scan` no Termux:
 
 ```sh
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.2/install.sh | bash
+pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.3/install.sh | bash
 ```
 
 Para inspecionar o instalador primeiro:
 
 ```sh
 pkg install -y curl
-curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.2/install.sh
+curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.3/install.sh
 less install.sh
 bash install.sh
 warp-scan --test

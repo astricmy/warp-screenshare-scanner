@@ -79,6 +79,20 @@ def send(envelope, token="", direct=False, sleep=time.sleep):
                 return False,"Relay não confirmou o recebimento"
             return True,"Relatório entregue ao Discord" if direct else "Relay confirmou o envio"
         except HTTPError as error:
+            if not direct and error.code != 429:
+                try:
+                    info = json.loads(error.read(2048))
+                except (ValueError, OSError):
+                    info = {}
+                if not isinstance(info, dict):
+                    info = {}
+                if info.get("uncertain"):
+                    return False, "Entrega incerta. Confira o canal antes de repetir."
+                if error.code < 500 or error.code == 502:
+                    reason = info.get("message") if url == config.RELAY_URL + "/report" else None
+                    if not isinstance(reason, str) or not reason.isprintable():
+                        reason = "Confira a configuração com a staff."
+                    return False, f"O envio foi autorizado, mas o servidor respondeu HTTP {error.code}. {reason[:180]}"
             if error.code==429:
                 try:
                     delay=float(json.loads(error.read(1024)).get("retry_after",2**attempt))

@@ -1,5 +1,9 @@
 # Histórico
 
+## 0.2.3 — consentimento e entrega
+
+- Confirmações aceitam variações de caixa, repetem entradas inválidas e destacam a pergunta. O envio diferencia recusa local e falha no servidor. Corrigida a requisição do Worker ao Discord.
+
 ## 0.2.2 — envio pela nuvem
 
 - Um convite configurado uma vez no Termux permite que o Worker emita sessões de envio após a confirmação. A cópia local e o modo manual continuam disponíveis.

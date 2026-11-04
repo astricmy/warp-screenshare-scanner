@@ -15,7 +15,7 @@ import time
 import uuid
 
 from .core import now
-from .ui import yes_no
+from .ui import yes_no, choice
 
 MAX_PNG_BYTES = 4 * 1024 * 1024
 MAX_PIXELS = 16_777_216
@@ -101,7 +101,7 @@ def _capture(argv):
 
 def _preview(data, tmpdir):
     """O arquivo 0600 existe só entre a abertura da prévia e a decisão do jogador."""
-    if input("Volte ao Termux e digite VER para abrir a prévia local. Enter descarta: ").strip() != "VER":
+    if not choice("Digite VER para abrir a prévia local. Enter descarta: ", {"ver"}, {""}):
         return False
     fd, name = tempfile.mkstemp(dir=tmpdir, prefix="warp-previa-", suffix=".png")
     path = Path(name)
@@ -114,7 +114,7 @@ def _preview(data, tmpdir):
         if viewer.returncode:
             return False
         print("Use um visualizador local. Verifique a tela inteira e retorne ao Termux.")
-        return yes_no("Você VIU a imagem, confirmou a pasta correta e autoriza anexar este PNG integral ao relatório? [padrão n]")
+        return yes_no("Você VIU a imagem, confirmou a pasta correta e autoriza anexar este PNG integral ao relatório?")
     finally:
         path.unlink(missing_ok=True)
 
@@ -175,7 +175,7 @@ def review(ctx, report):
         print(f"Prepare o gerenciador de arquivos na pasta de {path} e volte ao Termux.")
         print("A imagem incluirá a tela INTEIRA exatamente como estiver, inclusive notificações.")
         print("Oculte dados pessoais. Após confirmar, terá 10 segundos para voltar à pasta.")
-        if not yes_no("Autoriza UMA captura integral após a contagem e sua abertura em um visualizador local? [padrão n]"):
+        if not yes_no("Autoriza UMA captura integral após a contagem e sua abertura em um visualizador local?"):
             return skip("Captura recusada pelo jogador.")
         for seconds in range(10, 0, -1):
             print(f"Captura em {seconds} s. Ctrl+C cancela.", flush=True)

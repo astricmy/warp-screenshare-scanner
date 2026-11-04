@@ -62,11 +62,15 @@ export class Delivery {
       form.append(`files[${i}]`, new Blob([content], { type: file.content_type }), file.filename);
     });
     let response;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
     try {
-      response = await fetch(webhookURL(this.env.DISCORD_WEBHOOK_URL), { method: "POST", body: form, redirect: "error", signal: AbortSignal.timeout(15000) });
+      response = await fetch(webhookURL(this.env.DISCORD_WEBHOOK_URL), { method: "POST", body: form, redirect: "manual", signal: controller.signal });
     } catch {
       await this.setState("unknown");
       return reply(502, "Entrega incerta: confira o canal da staff.", { uncertain: true });
+    } finally {
+      clearTimeout(timer);
     }
     if (response.ok) {
       // Não repassar nem registrar a resposta Discord (contém dados do webhook).
