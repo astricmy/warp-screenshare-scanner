@@ -14,17 +14,17 @@ python scan.py --test --plain
 
 No celular, instale o Termux e o aplicativo complementar Termux:API pela mesma fonte. O pacote de terminal `termux-api` e o aplicativo Android correspondente são necessários para usar o clipboard pelo Termux. [Instalação oficial do Termux](https://github.com/termux/termux-app#installation) · [Termux:API](https://github.com/termux/termux-api)
 
-Com o release `v0.2.1` disponível, esta linha instala o comando `warp-scan` no Termux:
+Com o release `v0.2.2` disponível, esta linha instala o comando `warp-scan` no Termux:
 
 ```sh
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.1/install.sh | bash
+pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.2/install.sh | bash
 ```
 
 Para inspecionar o instalador primeiro:
 
 ```sh
 pkg install -y curl
-curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.1/install.sh
+curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.2/install.sh
 less install.sh
 bash install.sh
 warp-scan --test
@@ -36,11 +36,11 @@ A instalação padrão inclui `aapt` para identificar o aplicativo no manifesto 
 
 ## Sessão acompanhada
 
-1. A staff gera um **código público de sessão** e um **token privado de envio** com o gerador do Worker. O jogador coloca somente o código público na descrição do perfil do Roblox.
+1. Com o convite fixo configurado pela staff na instalação, a Cloudflare autoriza cada envio automaticamente após a confirmação. No modo manual, a staff gera um **código público de sessão** e um **token privado de envio** com o gerador do Worker. O jogador coloca somente o código público na descrição do perfil do Roblox.
 2. Para uma verificação real no Termux, execute `warp-scan --adb`. Se a staff fornecer um código de sessão, acrescente `--session-code WARP-...`. O modo `--test` usa uma amostra fictícia e nunca envia ao Discord.
 3. O scanner oferece identificar o nick sem digitação. Com ADB local pareado, autorize cada leitura e abra a tela **Configurações → Minha conta** do aplicativo indicado. Deixe o campo **Nome de usuário** visível por 12 segundos e volte ao Termux. Apenas o nick de um campo reconhecido é retido. Se a versão ou o idioma do app não expuser esse campo ao Android, o relatório mostra N/A. Por esse método não se atribui posse, não se guarda ID e não se consulta avatar. As opções antigas de nick explícito continuam disponíveis para a staff.
 4. Revise os achados, os caminhos Android, os horários, as fontes, a cobertura e os dados que seguirão nos anexos. Uma captura, quando autorizada, exige revisão da imagem inteira antes do envio.
-5. O scanner mostra onde salvou os arquivos no aparelho. Se quiser compartilhar, confirme o envio e insira o token privado da sessão. Ao terminar, remova o código da descrição e desligue a depuração sem fio. [Guia de ADB do Android](https://developer.android.com/tools/adb)
+5. O scanner mostra onde salvou os arquivos no aparelho. Se quiser compartilhar, confirme o envio (o token só é solicitado no modo manual). Ao terminar, remova o código da descrição e desligue a depuração sem fio. [Guia de ADB do Android](https://developer.android.com/tools/adb)
 
 | Opção | Efeito |
 |---|---|
@@ -86,7 +86,7 @@ A embed branca começa pelo perfil Roblox, Discord informado, marca e modelo, ve
 
 Quando há perfil identificado e o envio é autorizado, o scanner tenta anexar o avatar público como `avatar.png` pela [API de thumbnails do Roblox](https://create.roblox.com/docs/cloud/reference/domains/thumbnails). Falha nessa etapa deixa a mensagem sem imagem. Os IDs numéricos explícitos do perfil e do Discord informado são distintos de identificadores privados do telefone. IPs, MAC e SSID não aparecem nos relatórios textuais; uma captura aprovada deve ser conferida pelo jogador.
 
-O telefone envia o relatório ao Worker da staff por HTTPS. O Worker valida um token HMAC com expiração, controla as tentativas por IP e código e repassa ao Discord embeds, JSON, TXT e eventual imagem autorizada. Configure `DISCORD_WEBHOOK_URL` e `SESSION_SECRET` como segredos do Worker. No celular, configure `WARP_RELAY_URL` com a origem HTTPS do relay. O endereço não está definido no projeto. [Exemplo completo, instalação e protocolo do Worker](worker/README.md)
+O telefone envia o relatório ao Worker da staff por HTTPS. O Worker valida um token HMAC com expiração, controla as tentativas por IP e código e repassa ao Discord embeds, JSON, TXT e eventual imagem autorizada. Configure `DISCORD_WEBHOOK_URL` e `SESSION_SECRET` como segredos do Worker. No celular, configure `WARP_RELAY_URL` com a origem HTTPS do relay. A versão da WARP já inclui o endereço público do Worker. O convite privado de envio fica fora do repositório. [Exemplo completo, instalação e protocolo do Worker](worker/README.md)
 
 O perfil é consultado com `POST /v1/usernames/users` e `GET /v1/users/{userId}` na API pública do Roblox. O relatório guarda a URL do perfil e o resultado da comparação do código. A descrição usada na comparação é descartada. [Referência oficial da API de usuários](https://create.roblox.com/docs/cloud/reference/domains/users)
 

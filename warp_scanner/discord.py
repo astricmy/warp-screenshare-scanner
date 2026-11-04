@@ -11,6 +11,27 @@ import config
 from .net import request
 
 
+def saved_invite():
+    from pathlib import Path
+    # O convite da staff só pode ser usado na origem definida nesta versão.
+    if os.environ.get("WARP_RELAY_URL", config.RELAY_URL).rstrip("/") != config.RELAY_URL:
+        return ""
+    try:
+        return (Path.home() / ".config/warp/report-invite").read_text(encoding="ascii").strip()
+    except (OSError, ValueError):
+        return ""
+
+
+def cloud_token(invite, code):
+    raw = request(config.RELAY_URL + "/session", json.dumps({"code": code}).encode(),
+                  {"Authorization": "Invite " + invite, "Content-Type": "application/json"},
+                  max_bytes=2048)
+    token = json.loads(raw)["token"]
+    if not isinstance(token, str) or not token.startswith("auto."):
+        raise ValueError("Resposta inválida")
+    return token
+
+
 def multipart(envelope):
     boundary="warp"+uuid.uuid4().hex
     payload={**envelope["payload"],"username":config.BRAND,"allowed_mentions":{"parse":[]}}

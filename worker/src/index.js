@@ -1,4 +1,4 @@
-import { MAX_BYTES, PublicError, reply, opaqueKey, verifyToken, readBoundedJSON, validateReport, webhookURL, sensitiveSignatures } from "./security.js";
+import { CODE, createToken, MAX_BYTES, PublicError, reply, opaqueKey, verifyToken, readBoundedJSON, validateReport, webhookURL, sensitiveSignatures } from "./security.js";
 export { Quota, Delivery } from "./state.js";
 import { MAX_WIRE_BYTES, verifyEvidence } from "./evidence.js";
 
@@ -7,7 +7,7 @@ export default {
     try {
       const url = new URL(request.url);
       if (url.protocol !== "https:") return reply(400, "HTTPS obrigatório.");
-      if (!["/report", "/signatures"].includes(url.pathname) || url.search) return reply(404, "Rota inexistente.");
+      if (!["/report", "/signatures", "/session"].includes(url.pathname) || url.search) return reply(404, "Rota inexistente.");
       const signatureRequest = url.pathname === "/signatures";
       if (request.method !== (signatureRequest ? "GET" : "POST")) return reply(405, signatureRequest ? "Use GET." : "Use POST.");
       // Verificar configuração antes de abrir contadores persistentes.
@@ -18,8 +18,28 @@ export default {
       const quota = env.QUOTAS.get(env.QUOTAS.idFromName(`ip:${ipKey}`));
       const allowed = await quota.fetch("https://internal/consume", { method: "POST", body: JSON.stringify({ limit: 30, seconds: 60 }) });
       if (!allowed.ok) return reply(429, "Aguarde antes de tentar novamente.", { retry_after: 60 });
-      const claims = await verifyToken(env.SESSION_SECRET, request.headers.get("Authorization"));
-      const codeKey = await opaqueKey(env.SESSION_SECRET, `code:${claims.code}`);
+      const auth = request.headers.get("Authorization") || "";
+      if (url.pathname === "/session") {
+        const invite = await opaqueKey(env.SESSION_SECRET, "warp:report-invite:v1");
+        // Compara HMACs de comprimento fixo sem expor o convite.
+        const supplied = auth.startsWith("Invite ") ? auth.slice(7) : "";
+        if (supplied.length !== invite.length ||
+            await opaqueKey(env.SESSION_SECRET, supplied) !== await opaqueKey(env.SESSION_SECRET, invite))
+          return reply(401, "Convite inválido.");
+        const body = await readBoundedJSON(request, 256);
+        if (typeof body?.code !== "string" || !CODE.test(body.code)) return reply(400, "Código inválido.");
+        const shared = env.QUOTAS.get(env.QUOTAS.idFromName("auto:issuance"));
+        if (!(await shared.fetch("https://internal/consume", { method: "POST", body: JSON.stringify({ limit: 10, seconds: 60 }) })).ok)
+          return reply(429, "Aguarde antes de enviar.", { retry_after: 60 });
+        const iat = Math.floor(Date.now() / 1000);
+        const claims = { v: 1, code: body.code, iat, exp: iat + 900, nonce: crypto.randomUUID() };
+        const key = await opaqueKey(env.SESSION_SECRET, "warp:report-signing:v1");
+        return reply(200, "Sessão pronta.", { token: "auto." + await createToken(key, claims) });
+      }
+      const automatic = !signatureRequest && auth.startsWith("Bearer auto.");
+      const signingKey = automatic ? await opaqueKey(env.SESSION_SECRET, "warp:report-signing:v1") : env.SESSION_SECRET;
+      const claims = await verifyToken(signingKey, automatic ? auth.replace("Bearer auto.", "Bearer ") : auth);
+      const codeKey = await opaqueKey(env.SESSION_SECRET, `${automatic ? "auto" : "code"}:${claims.code}`);
       const codeQuota = env.QUOTAS.get(env.QUOTAS.idFromName(`code:${codeKey}`));
       if (!(await codeQuota.fetch("https://internal/consume", { method: "POST", body: JSON.stringify({ limit: 10, seconds: 60 }) })).ok) return reply(429, "Limite da sessão atingido.", { retry_after: 60 });
       if (signatureRequest) return await sensitiveSignatures(env);

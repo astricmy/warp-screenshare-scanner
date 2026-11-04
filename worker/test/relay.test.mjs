@@ -363,3 +363,21 @@ test("resumo mede UTF-16 até 3800 e detalhes respeitam o total de 6000", () => 
   d.payload.embeds[0].description = "a".repeat(3000); d.payload.embeds.push({ title: "Detalhes", description: "a".repeat(3000) });
   assert.throws(() => validateReport(d, claims()));
 });
+import { opaqueKey } from "../src/security.js";
+
+test("convite permite somente sessões para relatórios, sem acesso às assinaturas", async () => {
+  const env = environment();
+  const headers = {"Content-Type":"application/json","CF-Connecting-IP":"192.0.2.1"};
+  const issue = auth => worker.fetch(new Request("https://relay.invalid/session", {
+    method:"POST", headers:{...headers, Authorization:auth}, body:JSON.stringify({code})
+  }), env);
+  assert.equal((await issue("Invite invalid")).status,401);
+  const issued = await issue("Invite " + await opaqueKey(secret,"warp:report-invite:v1"));
+  assert.equal(issued.status,200);
+  const {token} = await issued.json();
+  const auth = "Bearer " + token;
+  const denied = await worker.fetch(new Request("https://relay.invalid/signatures",{headers:{...headers,Authorization:auth}}),env);
+  assert.equal(denied.status,401);
+  env.DELIVERIES = {idFromName:n=>n,get:()=>({fetch:()=>new Response("ok")})};
+  assert.equal((await worker.fetch(await request(report(),{headers:{Authorization:auth}}),env)).status,200);
+});

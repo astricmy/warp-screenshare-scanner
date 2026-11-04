@@ -1,5 +1,9 @@
 # Histórico
 
+## 0.2.2 — envio pela nuvem
+
+- Um convite configurado uma vez no Termux permite que o Worker emita sessões de envio após a confirmação. A cópia local e o modo manual continuam disponíveis.
+
 ## 0.2.1 — sessão real no Termux
 
 - A demonstração indica como iniciar uma verificação real. A falta de endereço de entrega é informada antes do scan e não gera pedido de token.
