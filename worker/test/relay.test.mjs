@@ -218,7 +218,9 @@ test("envelope do formatador Python com perfil e avatar sintéticos chega intact
   t.mock.method(globalThis, "fetch", async (_url, init) => {
     const sent = JSON.parse(init.body.get("payload_json"));
     const file = init.body.get("files[2]");
-    assert.equal(sent.embeds[0].description, summary.description);
+    assert.equal(sent.embeds.length, 5);
+    assert.deepEqual(sent.embeds.slice(0, 3).map(e => e.fields.length), [5, 4, 3]);
+    assert.deepEqual(sent.embeds.slice(3), value.payload.embeds.slice(1));
     assert.equal(file.name, "avatar.png");
     assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.from(fixture.attachments[2].content, "base64"));
     received = true;

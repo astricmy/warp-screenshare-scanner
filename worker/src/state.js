@@ -30,6 +30,34 @@ export class Quota {
   }
 }
 
+// O scanner 0.2.x envia três grupos separados por linhas de 41 traços.
+export function organizePayload(payload) {
+  const [summary, ...details] = payload.embeds;
+  const groups = summary.description?.split("\n" + "-".repeat(41) + "\n");
+  if (groups?.length !== 3 || details.length > 7 ||
+      !groups[0].startsWith("👤 **Roblox User:") ||
+      !groups[1].startsWith("📊 **General Result:") ||
+      !groups[2].startsWith("🔁 **Roblox Replace Check:")) return payload;
+
+  // Campos verticais deixam cada pergunta em sua própria linha no celular.
+  const titles = ["Identificação e dispositivo", "Resultados da verificação", "Instalação e uso do Roblox"];
+  const cards = groups.map((group, index) => {
+    const fields = [];
+    for (const line of group.split("\n")) {
+      const heading = /^([^*]+)\*\*([^*]+):\*\* (.+)$/.exec(line);
+      if (heading) fields.push({ name: heading[1] + heading[2], value: heading[3] });
+      else if (fields.length) fields[fields.length - 1].value += "\n" + line;
+    }
+    const card = index === 0 ? { ...summary } : { color: index === 1 ? 0x3498db : 0x5865f2 };
+    delete card.description;
+    card.title = titles[index];
+    if (fields.length && fields.length <= 25 && fields.every(f => f.value.length <= 1024 && f.name.length <= 256)) card.fields = fields;
+    else card.description = group;
+    return card;
+  });
+  return { ...payload, embeds: [...cards, ...details] };
+}
+
 export class Delivery {
   constructor(ctx, env) { this.ctx = ctx; this.env = env; }
   async fetch(request) {
@@ -56,7 +84,7 @@ export class Delivery {
     // O relatório e anexos existem só em memória; armazenamento guarda apenas
     // hash, ID, estado e prazo. Nunca guardamos IP, token nem conteúdo coletado.
     const form = new FormData();
-    form.append("payload_json", JSON.stringify(report.payload));
+    form.append("payload_json", JSON.stringify(organizePayload(report.payload)));
     report.attachments.forEach((file, i) => {
       const content = file.content_type === "image/png" ? decodePNG(file.content) : file.content;
       form.append(`files[${i}]`, new Blob([content], { type: file.content_type }), file.filename);
