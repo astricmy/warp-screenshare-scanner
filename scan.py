@@ -245,6 +245,8 @@ def main(argv=None):
         from warp_scanner.account_screen import observe
         args.visible_roblox = None if args.nick else observe(ctx, "Roblox", ui.yes_no)
         args.visible_discord = observe(ctx, "Discord", ui.yes_no) if consent.get("discord") and not args.discord_user else None
+        if ctx.privilege.get("adb") and getattr(args, "account_observations", {}):
+            input("Volte ao Termux e pressione Enter para continuar a coleta: ")
         if not ctx.privilege.get("adb") and not args.nick:
             print("Leitura automática do nick indisponível sem ADB local. Para tentar, use warp-scan --adb.")
         if not args.session_code and saved_invite():
@@ -256,6 +258,8 @@ def main(argv=None):
             print("Coloque o código da sessão temporariamente na descrição pública do perfil.")
             input("Pressione Enter quando estiver pronto para consultar o perfil: ")
         ui.step(3,"Arquivos e integridade")
+        from warp_scanner.storage_access import prepare
+        prepare(ctx.storage, ui.yes_no)
         try:
             ctx.files=list(iter_allowed_files(ctx.storage,signatures,args.max_files,args.max_seconds,ctx.file_stats))
         except (OSError, ValueError):
@@ -284,6 +288,10 @@ def main(argv=None):
     modules=review.apply(modules,ctx)
     report=build(ctx,modules,integrity,synthetic=args.test)
     report["discord_identity"]=discord_identity(args.discord_user, args.discord_id) if consent.get("discord") else {"status":"NÃO VERIFICADO"}
+    if not consent.get("discord") and not args.test:
+        report["discord_identity"]["reason"] = "Inclusão do Discord recusada."
+    elif not args.discord_user and not args.test:
+        report["discord_identity"].update(getattr(args, "account_observations", {}).get("Discord", {}))
     if getattr(args, "visible_discord", None):
         report["discord_identity"]={"status":"OBSERVADO", "username":args.visible_discord}
     captures=[]

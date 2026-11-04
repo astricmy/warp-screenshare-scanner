@@ -104,7 +104,7 @@ def collect(ctx) -> dict:
     if ctx.consent.get("files"):
         for index, path in enumerate(ctx.files):
             if index >= max_files or time.monotonic() > deadline:
-                data["arquivos_pulados"] += 1
+                data["arquivos_pulados"] += len(ctx.files) - index
                 break
             path = Path(path)
             if path.suffix.lower() not in _TEXT_EXT | {".zip", ".apks"}:
@@ -152,7 +152,7 @@ def collect(ctx) -> dict:
         command = ["termux-clipboard-get"]
         if shutil.which("termux-clipboard-get") is None and ctx.privilege.get("adb"):
             command, clip_requires = ["dumpsys", "clipboard"], "adb"
-        clip = ctx.run(command, requires=clip_requires, timeout=5, max_bytes=max_bytes)
+        clip = ctx.run(command, requires=clip_requires, timeout=15, max_bytes=max_bytes)
         data["clipboard_leituras"] = 1
         if clip.ok and clip.text.strip():
             text = clip.text
@@ -171,7 +171,7 @@ def collect(ctx) -> dict:
                                  "ADB retornou dados redigidos ou um formato sem conteúdo confirmável; conferir na call."
                                  if adb_opaque else "Uma leitura consentida; conteúdo não relacionado descartado.", clip_requires))
         else:
-            checks.append(_check("clipboard_atual", "NÃO VERIFICADO", "API indisponível, acesso negado ou retorno vazio; conferir na call.", clip_requires))
+            checks.append(_check("clipboard_atual", "NÃO VERIFICADO", "Termux:API ausente, permissão negada ou área de transferência vazia. Instale o app Termux:API da mesma fonte do Termux e mantenha o Termux em primeiro plano.", clip_requires))
     else:
         checks.append(_check("clipboard_atual", "NÃO VERIFICADO", "Leitura recusada pelo jogador."))
     checks.append(_check("historico_clipboard", "NÃO VERIFICADO", "Históricos de teclados podem conter dados pessoais e não são abertos; conferir visualmente na call.", "root"))

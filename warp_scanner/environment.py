@@ -67,7 +67,7 @@ def collect(ctx):
                 states[label] = active
                 if active:
                     # Depuração iniciada pela própria verificação não soma ao risco.
-                    from_scan = key == "adb_wifi_enabled" and getattr(ctx.args, "adb_connected", False)
+                    from_scan = key in {"adb_wifi_enabled", "development_settings_enabled"} and getattr(ctx.args, "adb_connected", False)
                     if not from_scan:
                         findings.append(ctx.finding("M6", "configuração", label[0].upper() + label[1:], {"state": "ativo", "limite": "Configuração legítima em muitos aparelhos; não comprova cheat."}, "INDÍCIO", "hint", cap))
     checks.append({"name": "Configurações selecionadas", "requires": "none", "status": "OK" if len(states) == len(rules) else "PARCIAL" if states else "NÃO VERIFICADO", "reason": f"Estados acessíveis: {len(states)}/{len(rules)}. Valores de servidores, pacotes VPN e IDs são descartados."})

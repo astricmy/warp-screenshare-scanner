@@ -34,6 +34,7 @@ LIMIT_NOTE = ("O Python do Termux usa seu próprio conjunto de CAs e abre conex�
 # é diferente de uma configuração explicitamente NONE.
 WIFI_FILTER = """PATH=/system/bin:/system/xbin; set -o pipefail
 dumpsys wifi | awk '
+/Permission Denial|Permission denied|SecurityException|Can.t find service/ {print "UNAVAILABLE"; exit}
 /^[[:space:]]*Proxy settings:[[:space:]]*(STATIC|PAC|NONE|UNASSIGNED)[[:space:]]*$/ {
   mode=$NF; print "MODE " mode; next
 }
@@ -42,6 +43,7 @@ dumpsys wifi | awk '
 }'"""
 LINK_FILTER = """PATH=/system/bin:/system/xbin; set -o pipefail
 dumpsys connectivity | awk '
+/Permission Denial|Permission denied|SecurityException|Can.t find service/ {print "UNAVAILABLE"; exit}
 /Active default network:[[:space:]]*[0-9]+/ {net=$NF; next}
 /NetworkAgentInfo/ {chosen=(net ~ /^[0-9]+$/ && index($0,"network{" net "}")>0)}
 chosen && /DnsAddresses:/ {
@@ -67,10 +69,11 @@ done
 [ "$seen" -gt 0 ] && echo "TABLES=$seen" """
 USAGE_FILTER = """PATH=/system/bin:/system/xbin; set -o pipefail
 dumpsys usagestats | awk -v p="$1" '
+/Permission Denial|Permission denied|SecurityException|Can.t find service/ {denied=1; exit}
 /type=(ACTIVITY_RESUMED|MOVE_TO_FOREGROUND)/ {
  found=0; for(i=1;i<=NF;i++) if($i=="package=" p) found=1;
  if(found) hit=1
-} END {if(hit) print "HIT"}'"""
+} END {if(denied) print "UNAVAILABLE"; else if(hit) print "HIT"}'"""
 
 
 def check(name, requires, status, reason):
@@ -91,7 +94,10 @@ def _setting(ctx, namespace, key):
 
 def _filtered(ctx, script, *args, max_bytes=8192):
     # Les données variables entrent exclusivement comme arguments positionnels.
-    return _read(ctx, [SYSTEM_SH, "-c", script, "warp", *args], max_bytes)
+    value, cap = _read(ctx, [SYSTEM_SH, "-c", script, "warp", *args], max_bytes)
+    if value is not None and "UNAVAILABLE" in value.splitlines():
+        return None, cap
+    return value, cap
 
 
 def _ip(text):

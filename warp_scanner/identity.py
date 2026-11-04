@@ -17,38 +17,45 @@ def discord_identity(username, user_id=""):
 
 
 def collect(ctx):
-    if getattr(ctx.args, "visible_roblox", None):
-        return {"module":"M2","requires":"adb","status":"PARCIAL","reason":"Nick observado na tela de conta; posse não verificada.",
-                "data":{"nick":ctx.args.visible_roblox,"source":"tela da conta"},"findings":[],"checks":[]}
-    nick = ctx.args.nick
+    observed = getattr(ctx.args, "visible_roblox", None)
+    nick = observed or ctx.args.nick
+    def failed(reason):
+        if observed:
+            return {"module":"M2", "requires":"adb", "status":"PARCIAL", "reason":reason,
+                    "data":{"nick":observed, "source":"tela da conta", "ownership_verified":False},
+                    "findings":[], "checks":[{"name":"Perfil público", "requires":"none", "status":"NÃO VERIFICADO", "reason":reason}]}
+        return unavailable("M2", reason)
     if not nick or not re.fullmatch(r"[A-Za-z0-9_]{3,20}",nick):
-        return unavailable("M2","Nickname ausente ou inválido")
+        observation = getattr(ctx.args, "account_observations", {}).get("Roblox", {})
+        return failed(observation.get("reason", "Nickname ausente ou inválido"))
     try:
         lookup = get_json("https://users.roblox.com/v1/usernames/users",
                           {"usernames":[nick],"excludeBannedUsers":False})
         users = lookup.get("data",[])
         if len(users)!=1 or type(users[0].get("id")) is not int or not 0 < users[0]["id"] < 10**19:
-            return unavailable("M2","Usuário não encontrado na API pública")
+            return failed("Usuário não encontrado na API pública")
         uid = users[0]["id"]
         profile = get_json(f"https://users.roblox.com/v1/users/{uid}")
         name = profile.get("name", "")
-        if profile.get("id") != uid or not re.fullmatch(r"[A-Za-z0-9_]{3,20}", name):
+        if profile.get("id") != uid or not re.fullmatch(r"[A-Za-z0-9_]{3,20}", name) or name.casefold() != nick.casefold():
             raise ValueError()
         description = profile.pop("description", None)
-        checked = bool(ctx.args.session_code and isinstance(description, str))
+        checked = bool(not observed and ctx.args.session_code and isinstance(description, str))
         owned = bool(checked and re.search(r"(?<![A-Za-z0-9-])"+re.escape(ctx.args.session_code)+r"(?![A-Za-z0-9-])",description))
         del description
         data = {"nick":name,"displayName":redact(profile.get("displayName",""),80),
                 "userId":uid,"profile_url":f"https://www.roblox.com/users/{uid}/profile",
                 "created":profile.get("created"),"isBanned":profile.get("isBanned"),"ownership_verified":owned,
                 "ownership_status":"verificada" if owned else "não confere" if checked else "não verificada"}
+        if observed:
+            data["source"] = "tela da conta"
         findings=[]
         if ctx.args.expected_nick and ctx.args.expected_nick.casefold()!=data["nick"].casefold():
             findings.append(ctx.finding("M2","identidade","Nickname diferente do esperado pela staff",
                                         {"informado":data["nick"],"esperado":ctx.args.expected_nick},"PROVÁVEL","identity_mismatch"))
         return {"module":"M2","requires":"none","status":"PARCIAL","reason":"Somente identidade pública; identidade privada do app não lida",
                 "data":data,"findings":findings,"checks":[
-                    {"name":"API pública e posse","requires":"none","status":"OK","reason":"Descrição descartada após comparar código"},
+                    {"name":"API pública e posse","requires":"none","status":"OK","reason":"Perfil público consultado; posse não verificada" if observed else "Descrição descartada após comparar código"},
                     {"name":"Identidade privada do aplicativo","requires":"root","status":"NÃO VERIFICADO","reason":"Sem formato isolado de identidade validado; credenciais não são acessadas"}]}
     except Exception:
-        return unavailable("M2","API pública indisponível ou resposta inválida; nenhuma credencial utilizada")
+        return failed("API pública indisponível ou resposta inválida; nick observado preservado" if observed else "API pública indisponível ou resposta inválida; nenhuma credencial utilizada")

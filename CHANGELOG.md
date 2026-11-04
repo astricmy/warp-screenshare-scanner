@@ -1,5 +1,15 @@
 # Histórico
 
+## 0.2.4 — ADB e cobertura da coleta
+
+- Conecta automaticamente ao ADB local já pareado e descobre a porta de depuração quando exposta pelo Android.
+- A leitura consentida de Roblox/Discord tenta reconhecer a tela em uma janela limitada e informa a causa quando indisponível.
+- O nick observado do Roblox também consulta o perfil público, preservando o nick se a API falhar.
+- Verifica a permissão de armazenamento antes da varredura e melhora o diagnóstico do clipboard.
+- Corrige eventos antigos de tempo de uso e consultas de rede que ocultavam erros de permissão.
+- Depuração configurada para a própria telagem não soma indício por opções de desenvolvedor.
+- Validação automatizada; compatibilidade em aparelhos reais e diferentes versões dos apps ainda requer conferência.
+
 ## 0.2.3 — consentimento e entrega
 
 - Confirmações aceitam variações de caixa, repetem entradas inválidas e destacam a pergunta. O envio diferencia recusa local e falha no servidor. Corrigida a requisição do Worker ao Discord.

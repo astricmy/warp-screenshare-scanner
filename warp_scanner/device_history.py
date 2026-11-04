@@ -10,18 +10,20 @@ WINDOW_MS = 72 * HOUR_MS
 # Programa fixo, sem interpolação. O Android filtra pelo pacote. O sh projeta
 # somente datas, transições e instanceId do perfil principal (mesmo armazenamento do scanner).
 # Não persiste ID de atividade, classe, nomes de outros apps nem linhas brutas.
-EVENT_PROJECTION = r'''set -f
+EVENT_PROJECTION = r'''PATH=/system/bin:/system/xbin; set -o pipefail; set -f
 dumpsys usagestats -c com.roblox.client | while IFS= read -r line; do
+  [ "$finished" = 1 ] && continue
   case "$line" in
-    user=*)
-      [ "$active" = 1 ] && break
+    *"Permission Denial"*|*"Permission denied"*|*"SecurityException"*) exit 2;;
+    *user=*)
+      if [ "$active" = 1 ]; then finished=1; continue; fi
       set -- $line
       owner=0
       [ "$1" = user=0 ] && owner=1
       ;;
     *"hour events ("*"beginTime="*"endTime="*)
       [ "$owner" = 1 ] || continue
-      [ "$active" = 1 ] && break
+      if [ "$active" = 1 ]; then finished=1; continue; fi
       active=1
       b= e=
       range=${line#*beginTime=}
@@ -30,12 +32,13 @@ dumpsys usagestats -c com.roblox.client | while IFS= read -r line; do
       for f in $range; do case "$f" in endTime=*) e=$f;; esac; done
       printf 'R %s %s\n' "$b" "${e#endTime=}" | tr -d ')'
       ;;
-    *"In-memory "*) [ "$active" = 1 ] && break ;;
+    *"In-memory "*) if [ "$active" = 1 ]; then finished=1; continue; fi ;;
     *"package=com.roblox.client "*)
       [ "$active" = 1 ] || continue
       t= k= i= p=
       for f in $line; do case "$f" in time=*) t=${f#time=};; type=*) k=${f#type=};; package=*) p=${f#package=};; instanceId=*) i=${f#instanceId=};; esac; done
       [ "$p" = com.roblox.client ] || continue
+      case "$k" in MOVE_TO_FOREGROUND|MOVE_TO_BACKGROUND) [ -n "$i" ] || i=0;; esac
       case "$k" in ACTIVITY_RESUMED|ACTIVITY_PAUSED|ACTIVITY_STOPPED|MOVE_TO_FOREGROUND|MOVE_TO_BACKGROUND) printf 'E %s %s %s\n' "$t" "$k" "$i";; esac
       ;;
   esac
@@ -155,7 +158,7 @@ def collect(ctx):
     if ctx.privilege.get("root") or ctx.privilege.get("adb"):
         for cap in ("root", "adb"):
             if ctx.privilege.get(cap):
-                result = ctx.run(["sh", "-c", EVENT_PROJECTION], requires=cap, timeout=10, max_bytes=256_000)
+                result = ctx.run(["/system/bin/sh", "-c", EVENT_PROJECTION], requires=cap, timeout=10, max_bytes=256_000)
                 if result.ok:
                     usage = observed_usage(result.text, int(time.time() * 1000))
                     if usage:
