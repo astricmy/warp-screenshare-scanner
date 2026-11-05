@@ -82,7 +82,7 @@ class DeviceReportTests(unittest.TestCase):
         self.assertIs(device_history.reinstall_status(value, None, now + 72*3600)["value"], False)
         self.assertIsNone(device_history.reinstall_status(value, usage, now - 7200)["value"])
 
-    @unittest.skipUnless(shutil.which("sh"), "shell Android/POSIX indisponível")
+    @unittest.skipUnless(shutil.which("bash"), "shell Android/POSIX indisponível")
     def test_usage_projection_never_combines_two_android_profiles(self):
         dump = """user=10
 Last 24 hour events (beginTime=1793490000000 endTime=1793497200000 )
@@ -96,7 +96,8 @@ Last 24 hour events (beginTime=1793490000000 endTime=1793497200000 )
   time=1793497000000 type=ACTIVITY_PAUSED package=com.roblox.client instanceId=1
 """
         script = device_history.EVENT_PROJECTION.replace("dumpsys usagestats -c com.roblox.client", "cat", 1)
-        projected = subprocess.run(["sh", "-c", script], input=dump.encode(), capture_output=True, check=True).stdout.decode()
+        script = script.replace("PATH=/system/bin:/system/xbin; ", "")
+        projected = subprocess.run(["bash", "-c", script], input=dump.encode(), capture_output=True, check=True).stdout.decode()
         self.assertNotIn("1793490100000", projected)
         usage = device_history.observed_usage(projected, 1793497200000)
         self.assertEqual(usage["segundos_pareados_observados"], 60)
