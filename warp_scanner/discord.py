@@ -22,14 +22,32 @@ def saved_invite():
         return ""
 
 
-def cloud_token(invite, code):
-    raw = request(config.RELAY_URL + "/session", json.dumps({"code": code}).encode(),
-                  {"Authorization": "Invite " + invite, "Content-Type": "application/json"},
-                  max_bytes=2048)
-    token = json.loads(raw)["token"]
-    if not isinstance(token, str) or not token.startswith("auto."):
-        raise ValueError("Resposta inválida")
-    return token
+def cloud_token(invite, code, sleep=time.sleep):
+    body = json.dumps({"code": code}).encode()
+    headers = {"Authorization": "Invite " + invite, "Content-Type": "application/json"}
+    for attempt in range(3):
+        try:
+            raw = request(config.RELAY_URL + "/session", body, headers, max_bytes=2048)
+            token = json.loads(raw)["token"]
+            if not isinstance(token, str) or not token.startswith("auto."):
+                raise ValueError("Resposta inválida")
+            return token
+        except HTTPError as error:
+            if error.code not in {429, 500, 502, 503, 504} or attempt == 2:
+                raise
+            delay = 2 ** attempt
+            if error.code == 429:
+                try:
+                    delay = float(json.loads(error.read(2048)).get("retry_after", delay))
+                except (ValueError, TypeError, AttributeError):
+                    raise ValueError("Limite de sessão inválido") from None
+                if not math.isfinite(delay) or not 0 < delay <= 60:
+                    raise ValueError("Limite de sessão ativo") from None
+            sleep(delay)
+        except OSError:
+            if attempt == 2:
+                raise
+            sleep(2 ** attempt)
 
 
 def multipart(envelope):
