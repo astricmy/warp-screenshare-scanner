@@ -1,4 +1,6 @@
+import io
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 from warp_scanner.core import CommandResult
@@ -52,10 +54,39 @@ class AdbAutoTests(unittest.TestCase):
         with patch("builtins.input", return_value=""):
             self.assertEqual(ui._ask_adb_port("Porta"), "")
 
-    def test_pairing_reconnects_automatically(self):
+    def test_five_digit_pair_code_is_corrected_before_adb_receives_it(self):
         args = SimpleNamespace()
-        with patch.object(ui, "_adb_auto", side_effect=[False, False, True]), \
-             patch("builtins.input", side_effect=["", "12345"]), \
-             patch("subprocess.run", return_value=SimpleNamespace(returncode=0)) as pair:
+        paired = SimpleNamespace(returncode=0, stdout="Successfully paired to 127.0.0.1:34459", stderr="")
+        with redirect_stdout(io.StringIO()) as output, \
+             patch.object(ui, "_adb_auto", side_effect=[False, False, True]), \
+             patch("builtins.input", side_effect=["", "34459", "40753", "004753"]), \
+             patch("subprocess.run", return_value=paired) as pair:
             ui.adb_guide(args)
-        self.assertEqual(pair.call_args.args[0], ["adb", "pair", "127.0.0.1:12345"])
+        pair.assert_called_once()
+        self.assertEqual(pair.call_args.args[0], ["adb", "pair", "127.0.0.1:34459"])
+        self.assertEqual(pair.call_args.kwargs["input"], "004753\n")
+        self.assertNotIn("004753", output.getvalue())
+
+    def test_protocol_error_retries_with_new_port_and_code(self):
+        args = SimpleNamespace()
+        failed = SimpleNamespace(returncode=0, stdout="error: protocol fault (couldn't read status message): Success", stderr="")
+        paired = SimpleNamespace(returncode=0, stdout="Successfully paired to 127.0.0.1:34461", stderr="")
+        with patch.object(ui, "_adb_auto", side_effect=[False, False, False, True]), \
+             patch("builtins.input", side_effect=["", "34459", "123456", "34461", "654321"]), \
+             patch("subprocess.run", side_effect=[failed, paired]) as pair:
+            ui.adb_guide(args)
+        self.assertEqual([call.args[0][-1] for call in pair.call_args_list],
+                         ["127.0.0.1:34459", "127.0.0.1:34461"])
+        self.assertEqual([call.kwargs["input"] for call in pair.call_args_list],
+                         ["123456\n", "654321\n"])
+
+    def test_already_paired_can_retry_connection_without_new_code(self):
+        args = SimpleNamespace()
+        with patch.object(ui, "_adb_auto", return_value=False), \
+             patch("builtins.input", side_effect=["", "P", "33000", "33001"]), \
+             patch.object(ui, "run_command", side_effect=[
+                 ok("failed to connect"), CommandResult(False), ok("connected"), ok("uid=2000(shell)")
+             ]), patch("subprocess.run", side_effect=AssertionError("Não deve parear de novo")):
+            ui.adb_guide(args)
+        self.assertTrue(args.adb_connected)
+        self.assertEqual(args.adb_serial, "127.0.0.1:33001")

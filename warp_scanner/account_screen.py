@@ -55,14 +55,15 @@ def username(xml, app):
 
 
 def observe(ctx, app, ask, sleep=time.sleep):
-    def status(value, reason):
+    def status(value, reason, announce=True):
         args = getattr(ctx, "args", ctx)
         observations = getattr(args, "account_observations", {})
         observations[app] = {"status": value, "reason": reason}
         args.account_observations = observations
-        print(f"{app}: {reason}", flush=True)
+        if announce:
+            print(f"{app}: {reason}", flush=True)
     if not ctx.privilege.get("adb"):
-        status("NÃO VERIFICADO", "ADB indisponível. Autorizar a leitura exige também conectar o ADB local.")
+        status("NÃO VERIFICADO", "Leitura da tela indisponível sem conexão ADB.", announce=False)
         return None
     if not ask(f"Ler apenas o nick visível na tela Minha conta do {app} via ADB?"):
         status("RECUSADO", "Leitura da tela recusada.")

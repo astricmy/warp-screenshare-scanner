@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.2.5 — Pareamento no Termux
+
+- Confere se o código tem seis dígitos antes de tentar parear e preserva zeros à esquerda.
+- Permite repetir o pareamento ou a conexão na mesma execução e seguir sem ADB por escolha do jogador.
+
 ## 0.2.4 — ADB e cobertura da coleta
 
 - Conecta automaticamente ao ADB local já pareado e descobre a porta de depuração quando exposta pelo Android.

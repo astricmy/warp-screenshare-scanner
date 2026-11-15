@@ -2,6 +2,7 @@
 import os
 import re
 import shutil
+import subprocess
 import sys
 import textwrap
 from .core import run_command
@@ -125,16 +126,30 @@ def _adb_auto(args):
     return False
 
 
-def _ask_adb_port(prompt):
+def _ask_adb_port(prompt, shortcut=None):
     while True:
         port = question(prompt + " (Enter para seguir sem ADB): ")
-        if not port or _adb_port(port):
+        if not port or port == shortcut or _adb_port(port):
             return port
         print("Porta inválida. Digite um número de 1 a 65535.")
 
 
+def _adb_pair(port, code):
+    serial = f"127.0.0.1:{port}"
+    try:
+        # O código vai apenas pela entrada do cliente, nunca pela lista de processos.
+        result = subprocess.run(["adb", "pair", serial], input=code + "\n", text=True,
+                                capture_output=True, timeout=25, errors="replace")
+    except FileNotFoundError:
+        print("ADB ausente no Termux. Instale com pkg install android-tools.")
+        return False
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    # Algumas versões devolvem zero mesmo quando o servidor reporta uma falha.
+    return result.returncode == 0 and f"Successfully paired to {serial}" in result.stdout
+
+
 def adb_guide(args):
-    import subprocess
     args.adb_serial, args.adb_connected = None, False
     print("Verificando conexão ADB local e porta de depuração sem fio…")
     if _adb_auto(args):
@@ -144,26 +159,41 @@ def adb_guide(args):
     input("Pressione Enter após ativar para tentar conectar automaticamente: ")
     if _adb_auto(args):
         return
-    print("Abra Depuração sem fio > Parear com código. Mantenha essa tela aberta em tela dividida.")
-    print("O Android exige a confirmação do código na primeira conexão.")
-    port = _ask_adb_port("Porta de pareamento")
-    if not port:
-        print("ADB indisponível. As leituras que exigem ADB aparecerão como NÃO VERIFICADO.")
-        return
-    try:
-        # O adb recebe o código diretamente, sem salvar no relatório ou arquivo.
-        result = subprocess.run(["adb", "pair", f"127.0.0.1:{port}"], timeout=90)
-        if result.returncode:
-            print("Pareamento recusado ou expirado. Abra um novo código e execute warp-scan --adb.")
-            return
-        if _adb_auto(args):
-            return
-        port = _ask_adb_port("Porta de conexão na tela principal de Depuração sem fio (diferente da porta de pareamento)")
-        if port:
-            serial = f"127.0.0.1:{port}"
+    while True:
+        print("Abra Depuração sem fio > Parear dispositivo com código. Mantenha a janela aberta em tela dividida.")
+        print("Use a porta depois dos dois-pontos. Se este Termux já está pareado, digite P para conectar.")
+        port = _ask_adb_port("Porta de pareamento", "p")
+        if not port:
+            break
+        if port != "p":
+            while True:
+                code = question("Código de 6 dígitos da mesma janela (Enter para voltar): ")
+                if not code or re.fullmatch(r"[0-9]{6}", code):
+                    break
+                print("O código tem exatamente 6 dígitos. Use o campo Código de pareamento Wi-Fi, incluindo zeros no início.")
+            if not code:
+                continue
+            paired = _adb_pair(port, code)
+            if _adb_auto(args):
+                return
+            if not paired:
+                print("Falha na comunicação com o pareamento do Android. Reabra a janela para obter uma nova porta e um novo código.")
+                continue
+            print("Pareamento concluído. Falta conectar o Termux ao Android.")
+        while True:
+            print("Na tela principal de Depuração sem fio, veja Endereço IP e porta. Digite V para voltar ao pareamento.")
+            connect_port = _ask_adb_port("Porta de conexão", "v")
+            if connect_port == "v":
+                break
+            if not connect_port:
+                print("Seguindo sem ADB. Leituras que dependem dele ficarão como NÃO VERIFICADO.")
+                return
+            if connect_port == port:
+                print("Essa é a porta de pareamento. Volte à tela principal de Depuração sem fio para ver a porta de conexão.")
+                continue
+            serial = f"127.0.0.1:{connect_port}"
             result = run_command(["adb", "connect", serial], timeout=6, max_bytes=1024)
             if result.ok and _adb_ready(args, serial):
                 return
-    except (OSError, ValueError, subprocess.TimeoutExpired):
-        pass
-    print("ADB indisponível. As leituras que exigem ADB aparecerão como NÃO VERIFICADO.")
+            print("A conexão ainda não respondeu. Confira a porta atual e tente novamente.")
+    print("Seguindo sem ADB. Leituras que dependem dele ficarão como NÃO VERIFICADO.")

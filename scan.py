@@ -247,7 +247,9 @@ def main(argv=None):
         args.visible_discord = observe(ctx, "Discord", ui.yes_no) if consent.get("discord") and not args.discord_user else None
         if ctx.privilege.get("adb") and getattr(args, "account_observations", {}):
             input("Volte ao Termux e pressione Enter para continuar a coleta: ")
-        if not ctx.privilege.get("adb") and not args.nick:
+        if args.adb and args.adb_connected and not ctx.privilege.get("adb"):
+            print("A conexão ADB caiu após o pareamento. Leituras da tela ficarão como NÃO VERIFICADO.")
+        if not args.adb and not ctx.privilege.get("adb") and not args.nick:
             print("Leitura automática do nick indisponível sem ADB local. Para tentar, use warp-scan --adb.")
         if not args.session_code and saved_invite():
             args.session_code = "WARP-" + secrets.token_hex(8).upper()
