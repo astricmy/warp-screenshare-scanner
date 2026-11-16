@@ -28,7 +28,7 @@ FORBIDDEN_DIRS = frozenset({
     "com.whatsapp", "org.telegram.messenger", "org.thoughtcrime.securesms",
     "com.facebook.orca", "camera", "screenshots", "recordings", "podcasts",
 })
-_SUFFIXES = frozenset({".txt", ".lua", ".luau", ".json", ".zip", ".apks", ".apk", ".xapk", ".so", ".obb", ".crdownload", ".pac", ".ovpn", ".conf", ".crt", ".pem", ".cer", ".p12"})
+_SUFFIXES = frozenset({".txt", ".log", ".lua", ".luau", ".json", ".zip", ".apks", ".apk", ".xapk", ".so", ".obb", ".crdownload", ".pac", ".ovpn", ".conf", ".crt", ".pem", ".cer", ".p12"})
 
 
 def contains_credential(text: str) -> bool:
@@ -126,7 +126,7 @@ def iter_allowed_files(storage: Path, signatures: dict, max_files: int = 2000,
     candidatos. stats sinaliza qualquer corte, para nunca transformar limite em OK.
     """
     stats = stats if stats is not None else {}
-    stats.update(files=0, entries=0, directories=0, errors=0, limited=False)
+    stats.update(files=0, entries=0, directories=0, errors=0, limited=False, roblox_logs="não observada")
     root = Path(os.path.abspath(storage))
     deadline = time.monotonic() + max(0.01, max_seconds)
     folders = _executor_folders(signatures)
@@ -154,6 +154,8 @@ def iter_allowed_files(storage: Path, signatures: dict, max_files: int = 2000,
             try:
                 with os.scandir(fd if fd is not None else directory) as entries:
                     stats["directories"] += 1
+                    if branch == "roblox_logs" and depth == 5:
+                        stats["roblox_logs"] = "acessível"
                     for item in entries:
                         stats["entries"] += 1
                         if time.monotonic() > deadline or stats["entries"] > max_entries or stats["files"] >= max_files:
@@ -171,16 +173,20 @@ def iter_allowed_files(storage: Path, signatures: dict, max_files: int = 2000,
                                 elif low == "android":
                                     # Acesso direcionado por pacote: nunca lista todos
                                     # os apps de Android/data ou Android/obb.
+                                    logs = path / "data" / "com.roblox.client" / "files" / "logs"
+                                    pending.append((logs, 5, "roblox_logs"))
                                     for package in sorted(packages):
                                         for area in ("data", "obb"):
                                             target = path / area / package
                                             if target.exists():
                                                 pending.append((target, 3, "allowed"))
-                            elif branch == "allowed" and depth < 8:
-                                pending.append((path, depth + 1, "allowed"))
-                            elif branch == "allowed":
+                            elif branch != "root" and depth < 24:
+                                pending.append((path, depth + 1, branch))
+                            elif branch != "root":
                                 stats["limited"] = True
-                        elif item.is_file(follow_symlinks=False) and (branch in {"root", "allowed"}) and path.suffix.lower() in _SUFFIXES:
+                        elif item.is_file(follow_symlinks=False) and path.suffix.lower() in _SUFFIXES:
+                            if branch == "roblox_logs" and path.suffix.lower() not in {".txt", ".log"}:
+                                continue
                             key = str(path)
                             if key not in seen:
                                 seen.add(key)
@@ -189,8 +195,14 @@ def iter_allowed_files(storage: Path, signatures: dict, max_files: int = 2000,
             finally:
                 if fd is not None:
                     os.close(fd)
+        except FileNotFoundError:
+            # A pasta externa de logs é opcional, inclusive em instalações normais.
+            if branch != "roblox_logs":
+                stats["errors"] += 1
         except (OSError, ValueError):
             stats["errors"] += 1
+            if branch == "roblox_logs":
+                stats["roblox_logs"] = "acesso incompleto"
 
 
 def _open_beneath(path: Path, root: Path, directory: bool = False) -> int:

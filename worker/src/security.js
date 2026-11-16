@@ -104,7 +104,7 @@ function profileURL(value) {
   if (!/^https:\/\/www\.roblox\.com\/users\/[1-9]\d{0,19}\/profile$/.test(value)) throw new PublicError(400, "Perfil inválido.");
 }
 
-function richText(value, max, profile = "", footer = false) {
+function richText(value, max, profile = "", footer = false, summary = false) {
   text(value, max);
   if (/@(?:everyone|here)\b|<[@#][!&]?\d+>|<\/(?:[^:>]+):\d+>/i.test(value)) throw new PublicError(400, "Menção não permitida.");
   // Remover somente spans de uma linha delimitados por crases literais.
@@ -114,6 +114,10 @@ function richText(value, max, profile = "", footer = false) {
   if (profile) {
     outside = outside.replace(`[🔗 Perfil](${profile})`, "");
     outside = outside.replace(`[Abrir perfil](${profile})`, "");
+  }
+  if (summary) {
+    // O único link do Discord aceito aponta para o mesmo ID escrito no campo do usuário.
+    outside = outside.replace(/^(💬 \*\*Discord User:\*\* `[^`\r\n]{1,32}` • )\[🔗 Discord\]\(https:\/\/discord\.com\/users\/([1-9]\d{16,19})\)(?= \(ID `\2`\))/m, "$1");
   }
   if (footer) outside = outside.replace(/^(?:🛡️ )?WARP SCREENSHARE • https:\/\/discord\.gg\/pthFZGupmH(?= • |$)/, "");
   outside = outside.replace(/`[^`\r\n]*`/g, "");
@@ -141,7 +145,7 @@ export function validateReport(value, claims) {
       profileURL(embed.url);
     }
     if ("title" in embed) total += richText(embed.title, 256);
-    if ("description" in embed) total += richText(embed.description, embed === summary ? 3800 : 4096, embed === summary ? summary.url : "");
+    if ("description" in embed) total += richText(embed.description, embed === summary ? 3800 : 4096, embed === summary ? summary.url : "", false, embed === summary);
     if ("color" in embed && (!Number.isInteger(embed.color) || embed.color < 0 || embed.color > 0xffffff)) throw new PublicError(400, "Cor inválida.");
     if ("timestamp" in embed && (typeof embed.timestamp !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(embed.timestamp) || !Number.isFinite(Date.parse(embed.timestamp)))) throw new PublicError(400, "Data inválida.");
     if ("fields" in embed) {

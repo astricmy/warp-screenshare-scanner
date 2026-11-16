@@ -71,6 +71,14 @@ class ReportLayoutTests(unittest.TestCase):
         self.assertIn("Sessão WARP-TESTE", footer)
         self.assertIn("Roblox User:", render_text(data))
 
+    def test_disclosed_discord_id_used_in_markdown_and_plain_text(self):
+        from warp_scanner.identity import discord_identity
+        report = self.report()
+        did = "123456789012345678"
+        report["discord_identity"] = discord_identity("jogador", did)
+        self.assertIn(f"[🔗 Discord](https://discord.com/users/{did})", discord_payload(report)["embeds"][0]["description"])
+        self.assertIn(f"Perfil: https://discord.com/users/{did}", render_text(report))
+
     def test_quatro_mais_graves_preservam_totais_antes_do_corte_dos_anexos(self):
         levels = ["INDÍCIO", "PROVÁVEL", "CONFIRMADO", "INDÍCIO", "CONFIRMADO", "PROVÁVEL", "INDÍCIO"]
         self.ctx.settings["max_findings"] = 4

@@ -28,10 +28,14 @@ def step(number, title):
 PLAIN = False
 
 
-def question(prompt):
+def text_answer(prompt):
     if not PLAIN and sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM") != "dumb":
         prompt = "\033[1;93m" + prompt + "\033[0m"
-    return input(prompt).strip().casefold()
+    return input(prompt).strip()
+
+
+def question(prompt):
+    return text_answer(prompt).casefold()
 
 
 def choice(prompt, positive, negative):
@@ -61,19 +65,26 @@ def consent_screen():
     Também serão examinados o certificado do Roblox, os sinais de instalação do
     Android e o tempo de uso do Roblox nas últimas 72 horas, quando disponível.
     Proxy, VPN, DNS, perfis de rede e certificados acessíveis serão verificados.
-    Com ADB pareado, você pode autorizar uma leitura da tela Minha conta de
-    cada app. Só o campo de nome de usuário é retido. Não é preciso digitar o nick.
-    O nickname informado será consultado na API pública oficial do Roblox;
+    Você pode digitar seu nick do Roblox e do Discord no Termux. Para incluir
+    um link do Discord, pode informar também o ID público da sua conta.
+    O nick do Roblox será consultado na API pública oficial do Roblox;
     a descrição pública será usada apenas para verificar o código da sessão.
-    Após autorizações separadas, texto/Lua e o clipboard atual serão
-    analisados localmente. Apenas correspondências redigidas, metadados,
+    Com sua autorização, o scanner analisa textos, scripts e logs nas pastas
+    indicadas, inclusive logs externos acessíveis do Roblox. Ele lista arquivos
+    .tas soltos pelo nome no armazenamento compartilhado acessível e usa um
+    modelo local para sugerir textos que merecem revisão.
+    Você também pode escolher um histórico exportado para contar visitas a
+    Pastebin e MediaFire e autorizar a leitura de avisos recentes do carregador
+    do Roblox e os motivos de encerramento registrados pelo Android. A análise
+    da RAM consulta estatísticas e características das regiões executáveis do jogo.
+    O clipboard tem autorização separada. Apenas correspondências redigidas, metadados,
     cobertura, perfil público e pontuação irão ao relatório.
     Você revisará o relatório e confirmará antes de enviá-lo ao relay da staff,
     que o encaminhará ao Discord. O relay recebe seu IP para limitar abusos.
     Uma foto da tela inteira pode conter notificações. A captura é opcional,
     exige nova autorização no momento e a imagem será aberta para sua revisão.
-    Não acessamos credenciais, conversas, contatos, mídia, documentos pessoais,
-    histórico de teclado, bancos privados ou identificadores do aparelho.
+    Não consultamos conversas, contatos, histórico de teclado ou bancos
+    privados de aplicativos. Mantenha documentos pessoais fora da pasta de análise.
     Não recuperamos arquivos apagados. Nenhum script encontrado é executado.
     Ao concluir, o scanner salva os relatórios JSON e TXT na pasta privada
     ~/.local/share/warp-screenshare/relatorios ou na pasta escolhida com --output.
@@ -84,8 +95,10 @@ def consent_screen():
     if not choice("Digite ACEITO para continuar ou RECUSO para sair: ", {"aceito", "s", "sim"}, {"recuso", "n", "não", "nao"}):
         return None
     return {"clipboard":yes_no("Autoriza uma leitura do clipboard atual?"),
-            "files":yes_no("Autoriza ler texto/Lua nas pastas permitidas para análise local?"),
-            "discord":yes_no("Autoriza incluir seu nick do Discord se identificável?"),
+            "files":yes_no("Autoriza analisar textos, logs e scripts nas pastas indicadas e localizar .tas soltos pelo nome no armazenamento compartilhado?"),
+            "discord":yes_no("Quer informar seu nick do Discord para o relatório?"),
+            "browser_history":yes_no("Quer selecionar um histórico exportado do Chrome para contar visitas a Pastebin e MediaFire?"),
+            "runtime_logs":yes_no("Autoriza consultar os avisos do carregador do Roblox e o histórico de encerramentos do jogo?"),
             "network_tests":yes_no("Autoriza testes de DNS do sistema, DNS sobre HTTPS público e TLS com servidores públicos do Roblox?"),
             "screenshot":yes_no("Quer a opção de revisar e anexar uma captura real de um achado?")}
 

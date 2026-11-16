@@ -14,17 +14,17 @@ python scan.py --test --plain
 
 No celular, instale o Termux e o aplicativo complementar Termux:API pela mesma fonte. O pacote de terminal `termux-api` e o aplicativo Android correspondente são necessários para usar o clipboard pelo Termux. [Instalação oficial do Termux](https://github.com/termux/termux-app#installation) · [Termux:API](https://github.com/termux/termux-api)
 
-Com o release `v0.2.5` disponível, esta linha instala o comando `warp-scan` no Termux:
+Com o release `v0.3.0` disponível, esta linha instala o comando `warp-scan` no Termux:
 
 ```sh
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.5/install.sh | bash
+pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.3.0/install.sh | bash
 ```
 
 Para inspecionar o instalador primeiro:
 
 ```sh
 pkg install -y curl
-curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.2.5/install.sh
+curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.3.0/install.sh
 less install.sh
 bash install.sh
 warp-scan --test
@@ -38,7 +38,7 @@ A instalação padrão inclui `aapt` para identificar o aplicativo no manifesto 
 
 1. Com o convite fixo configurado pela staff na instalação, a Cloudflare autoriza cada envio automaticamente após a confirmação. No modo manual, a staff gera um **código público de sessão** e um **token privado de envio** com o gerador do Worker. O jogador coloca somente o código público na descrição do perfil do Roblox.
 2. Para uma verificação real no Termux, execute `warp-scan --adb`. Se a staff fornecer um código de sessão, acrescente `--session-code WARP-...`. O modo `--test` usa uma amostra fictícia e nunca envia ao Discord.
-3. O scanner oferece identificar o nick sem digitação. Com ADB local pareado, autorize cada leitura e abra a tela **Configurações → Minha conta** do aplicativo indicado. Deixe o campo **Nome de usuário** visível por até um minuto e volte ao Termux. O scanner tenta reconhecer a tela várias vezes e informa o motivo se não conseguir. A conexão ADB local já pareada é reaproveitada e a porta é descoberta quando o Android a expõe. Na primeira vez, abra **Depuração sem fio → Parear dispositivo com código** e mantenha essa janela aberta em tela dividida com o Termux. No scanner, digite primeiro a **porta de pareamento** (o número depois dos dois-pontos), depois o **código de seis dígitos** da mesma janela, incluindo qualquer zero inicial. Se o pareamento falhar, abra um novo código e tente de novo na mesma execução. Se a conexão automática falhar após parear, use a porta de **Endereço IP e porta** da tela principal de Depuração sem fio. Apenas o nick de um campo reconhecido é retido. Se a versão ou o idioma do app não expuser esse campo ao Android, o relatório mostra N/A. Por esse método não se atribui posse, não se guarda ID e não se consulta avatar. As opções antigas de nick explícito continuam disponíveis para a staff.
+3. Digite seu **nome de usuário do Roblox** e, se autorizado, o **nome de usuário do Discord**. Enter pula o campo. O scanner procura o perfil público do Roblox. Para incluir o link do Discord, informe também o ID numérico da conta (no Discord, ative o Modo desenvolvedor e use **Copiar ID de usuário** no perfil). O jogador declara a identidade do Discord; o ID permite montar o link. Os nicks funcionam no Termux sem ADB.
 4. Revise os achados, os caminhos Android, os horários, as fontes, a cobertura e os dados que seguirão nos anexos. Uma captura, quando autorizada, exige revisão da imagem inteira antes do envio.
 5. O scanner mostra onde salvou os arquivos no aparelho. Se quiser compartilhar, confirme o envio (o token só é solicitado no modo manual). Ao terminar, remova o código da descrição e desligue a depuração sem fio. [Guia de ADB do Android](https://developer.android.com/tools/adb)
 
@@ -49,6 +49,7 @@ A instalação padrão inclui `aapt` para identificar o aplicativo no manifesto 
 | `--plain` ou `NO_COLOR=1` | Banner ASCII e terminal sem cores |
 | `--adb` | Pareamento e conexão apenas no próprio celular, por loopback |
 | `--window-days N` | Janela de downloads, padrão de 14 dias |
+| `--history-export ARQUIVO` | Exportação JSON de histórico do Chrome (Google Takeout) na pasta Download. A leitura depende da autorização do jogador |
 | `--max-file-kb N` | Limite de texto/Lua por arquivo, padrão de 512 KiB |
 | `--max-files N`, `--max-seconds N` | Limites da caminhada e da análise de arquivos |
 | `--nick`, `--expected-nick`, `--session-code` | Perfil e sessão esperados pela staff |
@@ -76,6 +77,16 @@ A instalação padrão inclui `aapt` para identificar o aplicativo no manifesto 
 
 Os achados de arquivo exibem o caminho observado, por exemplo `/storage/emulated/0/Download/Delta Executor.apk`. O nome pode ser alterado por qualquer pessoa. A revisão local compara referências e considera a força e a repetição dos sinais. Os detalhes por fonte estão em [Validação e autenticidade](docs/VALIDACAO.md) e [Rede](docs/REDE.md).
 
+### Textos, logs e arquivos TAS
+
+Com a leitura de arquivos autorizada, o scanner percorre até 24 níveis nas pastas permitidas, dentro dos limites de tempo e arquivos. Inclui os logs externos em `Android/data/com.roblox.client/files/logs` quando legíveis. Em textos e logs, o relatório lista correspondências suspeitas. Uma busca separada procura arquivos `.tas` soltos por nome em toda a parte legível do armazenamento compartilhado principal. Ela registra caminho, tamanho e data. Entradas em ZIPs ficam fora desse inventário. Pastas inacessíveis ou limites de tempo e quantidade tornam a cobertura parcial. Se o ZArchiver estiver visível ao Android, o jogador pode abri-lo para copiar ou extrair amostras em `Download/WARP`. O caminho relatado nesse caso é o da cópia.
+
+O modelo local compara amostras de textos sinalizados a exemplos sintéticos de código e documentação (TF-IDF e vizinho mais próximo). Além de priorizar achados com a mesma gravidade e peso, a triagem pode sugerir a revisão de um arquivo sem assinatura quando reconhece pares de chamadas executáveis em até 12.288 caracteres e há semelhança com os exemplos do modelo. O relatório registra o motivo da sugestão. O modelo pode se abster e não altera a pontuação. Esta versão ainda não tem avaliação de precisão com um conjunto independente de casos reais.
+
+Com o Roblox aberto, ADB ou root podem expor bibliotecas mapeadas e RAM residente (VmRSS) do processo. A leitura opcional do log verifica avisos recentes do carregador de bibliotecas pelo UID e PID do Roblox. Também examina regiões executáveis mapeadas, páginas anônimas em modo de escrita e execução, totais em smaps_rollup e motivos de encerramento retidos pelo Android, mesmo com o jogo fechado neste último caso. O relatório guarda contagens e marcadores. Uma região executável ou uma falha do jogo pode ter causa legítima. A disponibilidade varia por versão do Android e permissões. Esses dados cobrem uma amostra do processo atual. [Logcat no Android](https://developer.android.com/tools/logcat)
+
+Para verificar Pastebin e MediaFire pela exportação, coloque o histórico JSON do Chrome/Google Takeout (até 8 MiB) em Download e indique o arquivo quando o scanner perguntar. São contadas visitas aos domínios e seus subdomínios na janela escolhida (padrão de 14 dias). Um histórico sincronizado pode conter visitas de outros aparelhos. Visitas são informativas e ficam fora da pontuação.
+
 Os pesos estão em `settings.json`. Correspondências exatas validadas têm mais peso que nomes ou configuração de risco. A faixa **INCONCLUSIVO (cobertura parcial)** preserva a incerteza quando a pontuação é baixa e faltam módulos críticos. **CONFIRMADO** se refere ao objeto identificado, como um certificado diferente ou uma ferramenta de interceptação reconhecida. A decisão sobre o uso de cheats exige revisão humana.
 
 ## Configurar o Discord
@@ -94,7 +105,7 @@ O perfil é consultado com `POST /v1/usernames/users` e `GET /v1/users/{userId}`
 
 A base `signatures.json` reúne sementes não validadas. A staff deve conferir a origem de pacotes, hashes e certificados em instalações de referência e registrar fonte e data. A falta de referência confiável gera cobertura parcial. A atualização opcional por `WARP_SIGNATURES_URL` exige o SHA-256 em `WARP_SIGNATURES_SHA256`, distribuído pela staff por um canal independente. A rota opcional `/signatures` do relay usa o token privado. Falhas preservam a base pública local.
 
-O scanner limita a caminhada às pastas permitidas e a análise é estática. O relatório pode incluir texto reconstruído dos padrões encontrados, caminho, tamanho, datas e hash. A imagem aprovada é enviada inteira e pode revelar notificações. A revisão visual pelo jogador é indispensável. As restrições de coleta, as recomendações de retenção e o contato de segurança estão em [SECURITY.md](SECURITY.md).
+O scanner limita a análise de conteúdo às pastas permitidas. A busca separada por nomes .tas percorre o armazenamento compartilhado. O relatório pode incluir texto reconstruído dos padrões encontrados, caminho, tamanho, datas e hash. A imagem aprovada é enviada inteira e pode revelar notificações. A revisão visual pelo jogador é indispensável. As restrições de coleta, as recomendações de retenção e o contato de segurança estão em [SECURITY.md](SECURITY.md).
 
 A data de compilação do Android não determina a data de formatação. Uso recente, instalação recente e uma pasta vazia são indícios com várias explicações. A cobertura de uso pode abranger menos de 72 horas, dependendo do fabricante e das permissões. O relatório apresenta o intervalo disponível. O scanner não recupera arquivos apagados, nem varre bancos privados de teclados, mensageiros e navegadores. O aparelho controla o processo e pode adulterar o resultado.
 

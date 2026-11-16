@@ -1,9 +1,75 @@
-"""M5: consulta filtrada ao gerenciador de downloads; nenhum histórico completo."""
+"""M5: downloads filtrados e contagem local em histórico exportado pelo jogador."""
 import datetime as dt
+import json
+from pathlib import Path
 import re
 from urllib.parse import urlsplit
 from .roblox import query, requirements
-from .safety import domain_matches, normalize_domain
+from .safety import domain_matches, normalize_domain, read_bounded_file
+
+
+HISTORY_LIMIT = 8 * 1024 * 1024
+HISTORY_DOMAINS = {"pastebin.com": "Pastebin", "mediafire.com": "MediaFire"}
+
+
+def is_history_export(path, storage, selected=None):
+    path = Path(path)
+    if path.name.casefold() in {"history.json", "browserhistory.json", "browser history.json"}:
+        return True
+    return bool(selected and path == Path(storage) / "Download" / selected)
+
+
+def browser_history(ctx, since_ms, now_ms):
+    check = {"name": "Histórico exportado do Chrome", "requires": "none", "status": "NÃO VERIFICADO"}
+    selected = getattr(ctx.args, "history_export", None)
+    if not getattr(ctx, "consent", {}).get("browser_history") or not selected:
+        check["reason"] = "Exportação não autorizada ou não selecionada."
+        return check, {}
+    try:
+        root = Path(ctx.storage) / "Download"
+        path = root / selected
+        if not path.is_relative_to(root) or ".." in path.parts or path.suffix.casefold() != ".json":
+            raise ValueError("Caminho fora de Download ou tipo incompatível")
+        raw, _ = read_bounded_file(path, root, HISTORY_LIMIT)
+        records = json.loads(raw)
+        if not isinstance(records, dict) or not isinstance(records.get("Browser History"), list):
+            raise ValueError("Formato desconhecido")
+    except (OSError, ValueError, RecursionError):
+        check["reason"] = "Arquivo inacessível ou inválido. Selecione o histórico JSON do Chrome/Takeout em Download (até 8 MiB)."
+        return check, {}
+
+    counts = dict.fromkeys(HISTORY_DOMAINS.values(), 0)
+    incomplete = False
+    for visit in records["Browser History"]:
+        if not isinstance(visit, dict) or not isinstance(visit.get("url"), str):
+            incomplete = True
+            continue
+        try:
+            link = urlsplit(visit["url"])
+            if link.scheme not in {"http", "https"}:
+                continue
+            if not link.hostname or "\\" in link.netloc:
+                incomplete = True
+                continue
+            host = link.hostname.lower().rstrip(".")
+        except ValueError:
+            incomplete = True
+            continue
+        service = next((name for domain, name in HISTORY_DOMAINS.items()
+                        if host == domain or host.endswith("." + domain)), None)
+        if not service:
+            continue
+        stamp = str(visit.get("time_usec", ""))
+        if not re.fullmatch(r"[0-9]{1,18}", stamp):
+            incomplete = True
+            continue
+        if since_ms <= int(stamp) // 1000 <= now_ms:
+            counts[service] += 1
+    check["status"] = "PARCIAL" if incomplete else "OK"
+    check["reason"] = "Contagem das visitas no arquivo selecionado e na janela do scan. O histórico sincronizado pode incluir outros aparelhos."
+    if incomplete:
+        check["reason"] += " Há registros ilegíveis."
+    return check, counts
 
 
 def _domains(signatures):
@@ -69,8 +135,8 @@ def collect(ctx):
                     "limite": "Domínio não validado é apenas indício; download não comprova execução."}, "PROVÁVEL" if entry.get("verificado") else "INDÍCIO", "probable" if entry.get("verificado") else "hint", cap, time=stamp))
     all_queried = bool(domains) and len(domains) <= 80 and completed == (len(domains) + 9) // 10
     checks.append({"name": "Origens de download filtradas pelo provedor", "requires": "adb", "status": "OK" if all_queried else "PARCIAL" if completed else "NÃO VERIFICADO", "reason": "Consultas filtradas por domínio e janela, somente domínio e data retidos. Colunas/permissões variam por fabricante; limite de 80 domínios." if completed else "Provedor indisponível, acesso negado ou base sem domínios. Nenhum dump completo foi feito."})
-    checks.extend([
-        {"name": "Histórico do navegador", "requires": "root", "status": "NÃO VERIFICADO", "reason": "Conferir manualmente na call. Bancos de histórico não são copiados, pois podem conter dados pessoais fora da blocklist."},
-        {"name": "Typosquatting e títulos de páginas", "requires": "root", "status": "NÃO VERIFICADO", "reason": "Sem histórico completo; correspondências aproximadas não são prova e não ampliam a coleta."},
-    ])
-    return {"module": "M5", "requires": "none", "status": "PARCIAL" if completed else "NÃO VERIFICADO", "reason": "Histórico não verificável: conferir manualmente na call.", "findings": findings, "data": {"window_days": ctx.args.window_days, "provider_queries": tested}, "checks": checks}
+    history_check, visits = browser_history(ctx, since, int(dt.datetime.now(dt.timezone.utc).timestamp() * 1000))
+    checks.append(history_check)
+    status = "OK" if all_queried and history_check["status"] == "OK" else "PARCIAL" if completed or visits else "NÃO VERIFICADO"
+    return {"module": "M5", "requires": "none", "status": status, "reason": "Origens de download e visitas na exportação são verificadas separadamente.",
+            "findings": findings, "data": {"window_days": ctx.args.window_days, "provider_queries": tested, "history_visits": visits}, "checks": checks}

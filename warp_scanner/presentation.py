@@ -153,6 +153,8 @@ def overview(report, top=4):
     if url:
         name = span(identity["nick"])
         lines.append(f"👤 **Roblox User:** {name} • [🔗 Perfil]({url}) (ID {fixed(identity['userId'])})")
+    elif identity.get("source") == "informado" and identity.get("nick"):
+        lines.append("👤 **Roblox User:** " + span(identity["nick"]) + " • informado • " + span(module(report, "M2").get("reason") or "perfil indisponível", 100))
     elif identity.get("source") == "tela da conta":
         lines.append("👤 **Roblox User:** " + span(identity["nick"]) + " • observado na tela da conta")
     else:
@@ -161,8 +163,9 @@ def overview(report, top=4):
     lines.append("└ Posse do perfil: " + ownership.get(identity.get("ownership_status") if url else None, "➖ não verificada"))
     discord = report.get("discord_identity", {})
     if discord.get("username"):
-        did = str(discord.get("id", ""))
-        tag = " (ID " + fixed(did) + ")" if re.fullmatch(r"[1-9][0-9]{16,19}", did) else ""
+        from .identity import discord_id
+        did = discord_id(discord.get("id", ""))
+        tag = f" • [🔗 Discord](https://discord.com/users/{did}) (ID {fixed(did)})" if did else ""
         source = "observado na tela da conta" if discord.get("status") == "OBSERVADO" else "📝 informado (não verificado)"
         lines.append(f"💬 **Discord User:** {span(discord['username'],32)}{tag} • {source}")
     else:
@@ -194,6 +197,21 @@ def overview(report, top=4):
         lines.extend(finding_lines(f))
     if total > len(findings):
         lines.append(f"➕ {total-len(findings)} outros achados; veja os detalhes e os limites nos anexos")
+    files = data.get("M8", {})
+    if report.get("consent", {}).get("files") and "txt_logs_analisados" in files:
+        if check(report, "M8", "arquivos_autorizados") in ("OK", "PARCIAL"):
+            lines.append(f"📁 Textos e logs: {files['txt_logs_suspeitos']}/{files['txt_logs_analisados']} sinalizados • IA local: {files.get('sugestoes_ia', 0)} sugestões adicionais")
+        else:
+            lines.append("📁 Textos e logs: leitura não verificada")
+        coverage = check(report, "M8", "arquivos_tas")
+        if coverage in ("OK", "PARCIAL"):
+            partial = " • busca parcial" if coverage == "PARCIAL" else ""
+            lines.append(f"📄 Arquivos .tas soltos: {files['arquivos_tas']}{partial}")
+            paths = files.get("caminhos_tas", [])
+            if paths:
+                lines.append("└ " + span(paths[0], 110))
+        else:
+            lines.append("📄 Arquivos .tas soltos: busca não verificada")
     if s["clipboard"]:
         n = s["clipboard"]
         clip = f"⚠️ **{n} {'padrão suspeito' if n == 1 else 'padrões suspeitos'}** (leitura única)"
@@ -216,7 +234,13 @@ def overview(report, top=4):
         browser = "➖ **N/A** — verificação de downloads incompleta"
     lines.append("🧭 **Browser History Result:** " + browser)
     lines.extend("└ " + span(row["domain"], 60) + " (" + when(row["time"], "%d/%m %H:%M") + ")" for row in s["domains"][:4])
-    lines.append("└ ℹ️ Histórico do navegador: N/A — " + ("não coletado" if privilege.get("root") else "não verificável sem root"))
+    visits = data.get("M5", {}).get("history_visits")
+    history = check(report, "M5", "Histórico exportado do Chrome")
+    if visits and history in ("OK", "PARCIAL"):
+        suffix = " (leitura parcial)" if history == "PARCIAL" else ""
+        lines.append(f"└ Visitas no histórico exportado: Pastebin {int(visits['Pastebin'])} • MediaFire {int(visits['MediaFire'])}{suffix}")
+    else:
+        lines.append("└ Histórico exportado: N/A — exportação não verificada")
     lines.append("🌐 **Proxy Bypass Detection:** " + proxy_result(report, s))
     lines.append(BAR)
     lines.append("🔁 **Roblox Replace Check:** " + replace_result(data.get("M10", {}), data.get("M1", {})))

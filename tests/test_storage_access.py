@@ -7,6 +7,21 @@ from warp_scanner import storage_access
 
 
 class StorageTests(unittest.TestCase):
+    def test_zarchiver_only_launches_with_opt_in_and_visible_package(self):
+        ctx = SimpleNamespace(consent={"files": False}, run=Mock())
+        installed = (SimpleNamespace(ok=True, text="package:/data/app/base.apk"), "adb", [])
+        ask, wait = Mock(return_value=True), Mock()
+        with patch.object(storage_access, "query", return_value=installed) as probe:
+            storage_access.offer_zarchiver(ctx, ask, wait)
+            probe.assert_not_called()
+            ctx.consent["files"] = True
+            storage_access.offer_zarchiver(ctx, lambda _: False, wait)
+            ctx.run.assert_not_called()
+            ctx.run.return_value = SimpleNamespace(ok=True, text="Starting: Intent")
+            storage_access.offer_zarchiver(ctx, ask, wait)
+            self.assertEqual(ctx.run.call_args.args[0][-1], "ru.zdevs.zarchiver")
+            wait.assert_called_once()
+
     def test_accessible_directory_does_not_request_permission(self):
         with tempfile.TemporaryDirectory() as root:
             self.assertTrue(storage_access.prepare(Path(root), Mock(side_effect=AssertionError)))

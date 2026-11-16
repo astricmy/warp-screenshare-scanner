@@ -1,5 +1,12 @@
 # Histórico
 
+## 0.3.0 — Perfis informados e análise de arquivos e logs
+
+- Solicita os nicks no Termux. Resolve o perfil público do Roblox e monta o link do Discord quando o jogador fornece o ID.
+- Amplia a busca em pastas permitidas, incluindo logs externos do Roblox, textos suspeitos e arquivos escolhidos com o ZArchiver.
+- Procura arquivos soltos .tas no armazenamento compartilhado, inclui o caminho no relatório e informa buscas parciais.
+- Acrescenta triagem local de textos por aprendizado de máquina, metadados de RAM, diagnósticos recentes do carregador do Roblox e contagem opcional de visitas a Pastebin e MediaFire.
+
 ## 0.2.5 — Pareamento no Termux
 
 - Confere se o código tem seis dígitos antes de tentar parear e preserva zeros à esquerda.

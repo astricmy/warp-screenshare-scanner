@@ -3,6 +3,7 @@ import base64
 import re
 from .presentation import LEVELS, LABELS, facts, overview, message, profile_url, module, when
 from .report_privacy import scrub
+from .text_model import HIGH
 import json
 import uuid
 import config
@@ -14,7 +15,13 @@ def build(ctx, modules, integrity, synthetic=False):
     findings=[]
     for result in modules:
         findings.extend(result.get("findings",[]))
-    findings.sort(key=lambda f:(len(LEVELS)-LEVELS.index(f["level"]) if f.get("level") in LEVELS else 0,f.get("weight",0)),reverse=True)
+    def review_order(finding):
+        level = finding.get("level")
+        evidence = finding.get("evidence")
+        priority = isinstance(evidence, dict) and evidence.get("prioridade_ia") == HIGH
+        return (len(LEVELS) - LEVELS.index(level) if level in LEVELS else 0,
+                finding.get("weight", 0), priority)
+    findings.sort(key=review_order, reverse=True)
     score=sum(max(0,f.get("weight",0)) for f in findings)
     partial=any(not any(m["module"]==critical and m["status"]=="OK" for m in modules) for critical in config.CRITICAL_MODULES)
     limits=ctx.settings["thresholds"]
@@ -45,6 +52,7 @@ def plain_summary(report):
         for index in range(0, len(pieces), 2):
             pieces[index] = pieces[index].replace("**", "")
             pieces[index] = re.sub(r"\[🔗 Perfil\]\((https://www\.roblox\.com/users/[0-9]+/profile)\)", r"Perfil: \1", pieces[index])
+            pieces[index] = re.sub(r"\[🔗 Discord\]\((https://discord\.com/users/[0-9]+)\)", r"Perfil: \1", pieces[index])
         return "".join(pieces)
     return "\n".join(convert(line) for line in overview(report).splitlines())
 
@@ -59,7 +67,8 @@ def render_text(report):
         if isinstance(e, dict):
             for key, label in (("caminho_android","Caminho Android"), ("path","Caminho"), ("caminho","Caminho"),
                                ("local","Local"), ("domain","Domínio"), ("package","Pacote"), ("trecho","Trecho"),
-                               ("sha256","SHA-256"), ("limite","Limite da evidência")):
+                               ("sha256","SHA-256"), ("prioridade_ia","Triagem local de IA"),
+                               ("motivo_ia","Motivo da sugestão"), ("limite","Limite da evidência")):
                 if key in e:
                     lines.append(f"   {label}: {e[key]}")
         if f.get("review"):

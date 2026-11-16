@@ -351,6 +351,10 @@ test("permite só o perfil numérico coerente e URLs de conteúdo dentro de span
     return () => validateReport(d, claims());
   }
   assert.doesNotThrow(tryDescription("👤 **Roblox User:** `Exemplo` • [🔗 Perfil](https://www.roblox.com/users/123/profile)\n└ `https://origem.invalid/x`"));
+  const discord = "💬 **Discord User:** `jogador` • [🔗 Discord](https://discord.com/users/123456789012345678) (ID `123456789012345678`) • 📝 informado (não verificado)";
+  assert.doesNotThrow(tryDescription(discord));
+  assert.throws(tryDescription(discord.replace("discord.com/users", "example.org/users")), PublicError);
+  assert.throws(tryDescription(discord.replace(" (ID `123", " (ID `456")), PublicError);
   for (const text of [
     "Acesse https://origem.invalid/", "[perfil](https://origem.invalid/)", "[🔗 Perfil](https://www.roblox.com/users/456/profile)",
     "<@123456>", "<#123456>", "@everyone", "www.origemdados.invalid", "discord.gg/nascimentos",

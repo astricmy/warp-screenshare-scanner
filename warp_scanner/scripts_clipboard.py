@@ -13,9 +13,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .safety import contains_credential, read_bounded_file, redact, safe_url, normalize_domain
+from . import tas
+from .text_model import review_candidate, review_priority
+from .downloads_browser import is_history_export
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>\)\]\}]+", re.I)
-_TEXT_EXT = {".txt", ".lua", ".luau", ".json"}
+_TEXT_EXT = {".txt", ".log", ".lua", ".luau", ".json"}
+_EXECUTOR_CALL = re.compile(
+    r"(?<!\w)(?:getgenv|getrenv|identifyexecutor|getexecutorname|hookfunction|hookmetamethod|"
+    r"newcclosure|getrawmetatable|queue_on_teleport|firetouchinterest|fireproximityprompt)"
+    r"\s*\(", re.I)
 
 
 def _token(text: str, name: str) -> bool:
@@ -93,10 +100,18 @@ def _check(name: str, status: str, reason: str, requires: str = "none") -> dict:
     return {"name": name, "requires": requires, "status": status, "reason": reason}
 
 
+def _suspicious_plaintext(result, text):
+    if result["correspondencia_validada"] or _EXECUTOR_CALL.search(text):
+        return True
+    loader = re.search(r"(?i)\bloadstring\s*\(", text)
+    return bool(loader and re.search(r"(?i)(?:\bgame\s*:\s*httpget(?:async)?\s*\(|https?://)", text))
+
+
 def collect(ctx) -> dict:
     findings, checks = [], []
     data = {"credential_warning": False, "arquivos_analisados": 0,
             "arquivos_pulados": 0, "clipboard_leituras": 0,
+            "txt_logs_analisados": 0, "txt_logs_suspeitos": 0, "arquivos_tas": 0, "sugestoes_ia": 0,
             "observacao": "Padrões estáticos não demonstram execução. ctime é alteração de metadados, não criação."}
     max_bytes = min(max(int(getattr(ctx.args, "max_file_kb", 512)), 1), 8192) * 1024
     max_files = max(1, int(getattr(ctx.args, "max_files", 2000)))
@@ -107,34 +122,57 @@ def collect(ctx) -> dict:
                 data["arquivos_pulados"] += len(ctx.files) - index
                 break
             path = Path(path)
-            if path.suffix.lower() not in _TEXT_EXT | {".zip", ".apks"}:
+            ext = path.suffix.lower()
+            if ext not in _TEXT_EXT | {".zip", ".apks"}:
+                continue
+            if is_history_export(path, ctx.storage, getattr(ctx.args, "history_export", None)):
+                continue
+            if ext == ".zip" and path.name.casefold().startswith("takeout-"):
                 continue
             try:
-                raw, meta = read_bounded_file(path, ctx.storage, max_bytes)
                 relative = redact(path.relative_to(ctx.storage).as_posix(), 300)
-                if path.suffix.lower() in {".zip", ".apks"}:
+                raw, meta = read_bounded_file(path, ctx.storage, max_bytes)
+                if ext == ".json" and b'"Browser History"' in raw:
+                    continue
+                if ext in {".zip", ".apks"}:
                     _archive_names(ctx, raw, relative, meta, findings, data)
                     continue
-                if b"\x00" in raw:
+                encoding = "utf-16" if raw.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig"
+                text = raw.decode(encoding, errors="strict")
+                if "\x00" in text:
                     data["arquivos_pulados"] += 1
                     continue
-                text = raw.decode("utf-8-sig", errors="strict")
                 if sum(ord(c) < 32 and c not in "\r\n\t" for c in text) > max(2, len(text) // 100):
                     data["arquivos_pulados"] += 1
                     continue
                 digest = hashlib.sha256(raw).hexdigest()
                 result = analyze_text(text, ctx.signatures, digest=digest)
-                data["credential_warning"] |= contains_credential(text)
+                if ext in {".txt", ".log"}:
+                    data["txt_logs_analisados"] += 1
+                    if result and not _suspicious_plaintext(result, text):
+                        result = None
+                    if result:
+                        data["txt_logs_suspeitos"] += 1
+                sensitive = contains_credential(text)
+                data["credential_warning"] |= sensitive
                 data["arquivos_analisados"] += 1
-                del raw, text
                 if result:
                     evidence = {"caminho": relative, "tamanho": meta.st_size,
                                 "mtime": _iso(meta.st_mtime), "ctime_metadados": _iso(meta.st_ctime),
                                 "sha256": digest, "padroes": result["padroes"], "trecho": result["trecho"],
                                 "urls": result["urls"], "repositorios": result["repositorios"],
+                                "prioridade_ia": review_priority(text),
                                 "origem_download": "NÃO VERIFICADO"}
                     findings.append(ctx.finding("M8", "scripts", "Padrões de script em arquivo autorizado",
                                                 evidence, result["level"], result["weight_key"], time=_iso(meta.st_mtime)))
+                elif not sensitive and ext in {".txt", ".log", ".lua", ".luau"}:
+                    suggestion = review_candidate(text)
+                    if suggestion:
+                        data["sugestoes_ia"] += 1
+                        findings.append(ctx.finding("M8", "triagem local", "IA local sugeriu revisar o arquivo",
+                                                    {"caminho": relative, "motivo_ia": suggestion, "sha256": digest},
+                                                    "INFORMATIVO", "artifact", time=_iso(meta.st_mtime)))
+                del raw, text
             except (OSError, ValueError, UnicodeError, zipfile.BadZipFile, OverflowError):
                 data["arquivos_pulados"] += 1
         stats = getattr(ctx, "file_stats", {})
@@ -144,8 +182,16 @@ def collect(ctx) -> dict:
             status = "NÃO VERIFICADO"
         checks.append(_check("arquivos_autorizados", status,
                              "Arquivos inacessíveis, binários ou limites atingidos." if skipped else "Análise estática de arquivos elegíveis concluída."))
+        checks.append(_check("TXT e logs", status,
+                             f"{data['txt_logs_analisados']} lidos, {data['txt_logs_suspeitos']} com assinatura ou chamada suspeita. Pasta de logs externos do Roblox: {stats.get('roblox_logs', 'não observada')}."))
+        tas_findings, tas_check = tas.collect(ctx, max_files, max(1, float(getattr(ctx.args, "max_seconds", 30))))
+        findings.extend(tas_findings)
+        data["arquivos_tas"] = len(tas_findings)
+        data["caminhos_tas"] = [f["evidence"]["caminho_android"] for f in tas_findings[:3]]
+        checks.append(tas_check)
     else:
         checks.append(_check("arquivos_autorizados", "NÃO VERIFICADO", "Leitura de conteúdo recusada pelo jogador."))
+        checks.append(_check("arquivos_tas", "NÃO VERIFICADO", "Busca de arquivos não autorizada."))
     if ctx.consent.get("clipboard"):
         # Exatamente uma chamada: não tenta outro backend nem acompanha mudanças.
         clip_requires = "none"
@@ -195,10 +241,8 @@ def _archive_names(ctx, raw: bytes, relative: str, meta, findings: list, data: d
         for entry in entries:
             name = entry.filename.replace("\\", "/")
             # O nome de um .lua sozinho não significa executor.
-            if re.search(r"(?:^|/)(?:autoexec|executor)[^/]*/.*\.(?:lua|luau|txt)$", name, re.I):
+            if len(names) < 10 and re.search(r"(?:^|/)(?:autoexec|executor)[^/]*/.*\.(?:lua|luau|txt)$", name, re.I):
                 names.append(redact(name, 160))
-            if len(names) >= 10:
-                break
         data["arquivos_analisados"] += 1
         if names:
             findings.append(ctx.finding("M8", "scripts", "Nomes de entradas de arquivo sugerem contexto de executor",

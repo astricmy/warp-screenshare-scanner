@@ -122,6 +122,20 @@ class PatternTests(unittest.TestCase):
 
 
 class FilesystemTests(unittest.TestCase):
+    def test_deep_external_logs_only_traverse_roblox_log_directory(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            logs = root / "Android/data/com.roblox.client/files/logs"
+            deep = root / "Download" / Path(*(["nested"] * 12))
+            logs.mkdir(parents=True)
+            deep.mkdir(parents=True)
+            for path in (logs / "player.log", logs.parent / "unrelated.txt", deep / "fixture.lua"):
+                path.write_text("fixture")
+            stats = {}
+            self.assertEqual(set(iter_allowed_files(root, SIGNATURES, stats=stats)),
+                             {logs / "player.log", deep / "fixture.lua"})
+            self.assertEqual(stats["roblox_logs"], "acessível")
+
     def test_allowlist_does_not_descend_personal_or_generic_names(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -184,6 +198,69 @@ class FilesystemTests(unittest.TestCase):
 
 
 class CollectionTests(unittest.TestCase):
+    def test_txt_and_logs_only_keep_contextual_script_matches(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            paths = [root / name for name in ("private.txt", "reference.txt", "player.log", "binary.txt")]
+            paths[0].write_text("texto de exemplo privado")
+            paths[1].write_text("Documentation: readfile, loadstring and game:HttpGet.")
+            paths[2].write_text(LOADER, encoding="utf-16")
+            paths[3].write_bytes(b"\x00\x00\x05")
+            report = collect(FakeContext(root, paths))
+            self.assertEqual([f["evidence"]["caminho"] for f in report["findings"]], ["player.log"])
+            self.assertTrue(report["findings"][0]["evidence"]["prioridade_ia"])
+            self.assertNotIn("private.txt", json.dumps(report))
+            self.assertEqual(report["data"]["txt_logs_analisados"], 3)
+            self.assertEqual(report["data"]["arquivos_pulados"], 1)
+
+    def test_loose_tas_found_automatically_beyond_script_folders(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            archive_path = root / "run.zip"
+            target = root / "Documents" / "nested" / "jogo.TAS"
+            target.parent.mkdir(parents=True)
+            target.write_text("PRIVADO")
+            decoy = root / "jogo.tas.txt"
+            decoy.touch()
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("scripts/demo.TaS", "PRIVADO")
+            with patch.object(zipfile.ZipFile, "open", side_effect=AssertionError):
+                report = collect(FakeContext(root, [archive_path]))
+            self.assertEqual(report["data"]["arquivos_tas"], 1)
+            self.assertEqual(len(report["findings"]), 1)
+            finding = report["findings"][0]
+            self.assertEqual((finding["level"], finding["weight_key"]), ("INFORMATIVO", "artifact"))
+            self.assertEqual(finding["evidence"]["caminho_android"], target.as_posix())
+            self.assertEqual(report["data"]["caminhos_tas"], [target.as_posix()])
+            self.assertNotIn("PRIVADO", json.dumps(report))
+            self.assertNotIn("scripts/demo", json.dumps(report))
+
+    def test_tas_denied_root_is_unverified_and_limit_is_partial(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name in ("a.tas", "b.tas", "c.tas"):
+                (root / name).touch()
+            ctx = FakeContext(root)
+            ctx.args.max_files = 1
+            limited = collect(ctx)
+            self.assertEqual(limited["data"]["arquivos_tas"], 1)
+            self.assertEqual(next(c for c in limited["checks"] if c["name"] == "arquivos_tas")["status"], "PARCIAL")
+            with patch("warp_scanner.tas._entries", side_effect=PermissionError):
+                unavailable = collect(ctx)
+            self.assertEqual(next(c for c in unavailable["checks"] if c["name"] == "arquivos_tas")["status"], "NÃO VERIFICADO")
+
+    def test_model_only_candidate_enters_report_without_raw_text_or_score(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            sample = root / "example.txt"
+            sample.write_text("local before = getthreadidentity()\nsetthreadidentity(before) -- PRIVATE_SENTINEL")
+            report = collect(FakeContext(root, [sample]))
+            self.assertEqual(report["data"]["sugestoes_ia"], 1)
+            finding, = report["findings"]
+            self.assertEqual((finding["level"], finding["weight_key"]), ("INFORMATIVO", "artifact"))
+            self.assertIn("motivo_ia", finding["evidence"])
+            self.assertNotIn("PRIVATE_SENTINEL", json.dumps(report))
+
     def test_consent_refusal_does_not_open_file_or_read_clipboard(self):
         ctx = FakeContext("/unused", [Path("/unused/fixture.lua")], file_consent=False)
         with patch("warp_scanner.scripts_clipboard.read_bounded_file", side_effect=AssertionError("leitura proibida")):

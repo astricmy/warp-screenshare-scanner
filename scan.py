@@ -42,6 +42,7 @@ def arguments(argv=None):
     parser.add_argument("--discord", "--discord-user", dest="discord_user", default="",
                         help="Nome do Discord informado pelo jogador, incluído apenas com consentimento")
     parser.add_argument("--discord-id", default="", help="ID público do Discord informado pelo jogador ou pela staff (opcional)")
+    parser.add_argument("--history-export", default="", help="Caminho da exportação de histórico escolhida pelo jogador")
     parser.add_argument("--output",type=Path,help="Diretório explícito para salvar os relatórios minimizados")
     parser.add_argument("--version",action="version",version=config.VERSION)
     args=parser.parse_args(argv)
@@ -230,6 +231,10 @@ def main(argv=None):
         integrity={"status":"SIMULAÇÃO — sem verificação remota"}
     else:
         from warp_scanner import privilege, roblox, identity, cheats, traces, downloads_browser, environment, processes, scripts_clipboard, device_history, authenticity, network
+        args.verify_ownership = bool(args.nick)
+        identity.ask_profiles(args, consent.get("discord"), ui.text_answer)
+        if consent.get("browser_history") and not args.history_export:
+            args.history_export = ui.text_answer("Caminho da exportação do histórico (Enter para pular): ")
         if args.adb:
             ui.adb_guide(args)
         ui.step(2,"Privilégios")
@@ -242,26 +247,18 @@ def main(argv=None):
             print("ALERTA: root confirmado; consultas privilegiadas restritas a metadados autorizados.")
         signatures,signatures_status,signatures_digest=load_signatures(config.BASE_DIR,local_only=args.dry_run)
         ctx.signatures=signatures
-        from warp_scanner.account_screen import observe
-        args.visible_roblox = None if args.nick else observe(ctx, "Roblox", ui.yes_no)
-        args.visible_discord = observe(ctx, "Discord", ui.yes_no) if consent.get("discord") and not args.discord_user else None
-        if ctx.privilege.get("adb") and getattr(args, "account_observations", {}):
-            input("Volte ao Termux e pressione Enter para continuar a coleta: ")
-        if args.adb and args.adb_connected and not ctx.privilege.get("adb"):
-            print("A conexão ADB caiu após o pareamento. Leituras da tela ficarão como NÃO VERIFICADO.")
-        if not args.adb and not ctx.privilege.get("adb") and not args.nick:
-            print("Leitura automática do nick indisponível sem ADB local. Para tentar, use warp-scan --adb.")
         if not args.session_code and saved_invite():
             args.session_code = "WARP-" + secrets.token_hex(8).upper()
         if not args.session_code:
             code=input("Código público da sessão fornecido pela staff (WARP-...): ").strip()
             args.session_code=code if re.fullmatch(r"WARP-[A-Z0-9]{4,24}",code) else ""
-        if args.session_code and args.nick:
-            print("Coloque o código da sessão temporariamente na descrição pública do perfil.")
+        if args.verify_ownership and args.session_code and args.nick:
+            print(f"Coloque {args.session_code} temporariamente na descrição pública do perfil do Roblox.")
             input("Pressione Enter quando estiver pronto para consultar o perfil: ")
         ui.step(3,"Arquivos e integridade")
-        from warp_scanner.storage_access import prepare
-        prepare(ctx.storage, ui.yes_no)
+        from warp_scanner.storage_access import prepare, offer_zarchiver
+        if prepare(ctx.storage, ui.yes_no) and consent.get("files"):
+            offer_zarchiver(ctx, ui.yes_no)
         try:
             ctx.files=list(iter_allowed_files(ctx.storage,signatures,args.max_files,args.max_seconds,ctx.file_stats))
         except (OSError, ValueError):
@@ -292,10 +289,6 @@ def main(argv=None):
     report["discord_identity"]=discord_identity(args.discord_user, args.discord_id) if consent.get("discord") else {"status":"NÃO VERIFICADO"}
     if not consent.get("discord") and not args.test:
         report["discord_identity"]["reason"] = "Inclusão do Discord recusada."
-    elif not args.discord_user and not args.test:
-        report["discord_identity"].update(getattr(args, "account_observations", {}).get("Discord", {}))
-    if getattr(args, "visible_discord", None):
-        report["discord_identity"]={"status":"OBSERVADO", "username":args.visible_discord}
     captures=[]
     if not (args.test or args.dry_run) and consent.get("screenshot"):
         from warp_scanner import capture
@@ -308,7 +301,10 @@ def main(argv=None):
         console_report=console_report.replace(ui.UNICODE_BANNER,ui.ASCII_BANNER)
     print(console_report)
     exit_code = finish_report(report, captures, args)
-    print("Remova o código do perfil. Desative a depuração sem fio após a call.")
+    if getattr(args, "verify_ownership", False) and args.session_code and args.nick:
+        print("Você já pode remover o código da descrição do Roblox.")
+    if args.adb:
+        print("Você pode desativar a depuração sem fio após a call.")
     ui.banner(args.plain)
     return exit_code
 
