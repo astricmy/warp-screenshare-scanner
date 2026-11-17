@@ -235,7 +235,7 @@ class CollectionTests(unittest.TestCase):
             self.assertNotIn("PRIVADO", json.dumps(report))
             self.assertNotIn("scripts/demo", json.dumps(report))
 
-    def test_tas_denied_root_is_unverified_and_limit_is_partial(self):
+    def test_tas_ignores_script_file_limit_and_denied_root_is_unverified(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             for name in ("a.tas", "b.tas", "c.tas"):
@@ -243,8 +243,8 @@ class CollectionTests(unittest.TestCase):
             ctx = FakeContext(root)
             ctx.args.max_files = 1
             limited = collect(ctx)
-            self.assertEqual(limited["data"]["arquivos_tas"], 1)
-            self.assertEqual(next(c for c in limited["checks"] if c["name"] == "arquivos_tas")["status"], "PARCIAL")
+            self.assertEqual(limited["data"]["arquivos_tas"], 3)
+            self.assertEqual(next(c for c in limited["checks"] if c["name"] == "arquivos_tas")["status"], "OK")
             with patch("warp_scanner.tas._entries", side_effect=PermissionError):
                 unavailable = collect(ctx)
             self.assertEqual(next(c for c in unavailable["checks"] if c["name"] == "arquivos_tas")["status"], "NÃO VERIFICADO")

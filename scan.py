@@ -117,7 +117,7 @@ def save_report(report, destination=None, captures=None):
         return False
     files = [
         (f"relatorio_{scan_id}.json", lambda: json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")),
-        (f"relatorio_{scan_id}.txt", lambda: render_text(report).encode("utf-8")),
+        (f"relatorio_{scan_id}.txt", lambda: render_text(report, include_extra_tas=True).encode("utf-8")),
     ]
     # O --output explícito conserva o comportamento de salvar a captura aprovada.
     for item in (captures or []) if not private else ():

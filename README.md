@@ -14,17 +14,17 @@ python scan.py --test --plain
 
 No celular, instale o Termux e o aplicativo complementar Termux:API pela mesma fonte. O pacote de terminal `termux-api` e o aplicativo Android correspondente são necessários para usar o clipboard pelo Termux. [Instalação oficial do Termux](https://github.com/termux/termux-app#installation) · [Termux:API](https://github.com/termux/termux-api)
 
-Com o release `v0.3.0` disponível, esta linha instala o comando `warp-scan` no Termux:
+Com o release `v0.3.1` disponível, esta linha instala o comando `warp-scan` no Termux:
 
 ```sh
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.3.0/install.sh | bash
+pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.3.1/install.sh | bash
 ```
 
 Para inspecionar o instalador primeiro:
 
 ```sh
 pkg install -y curl
-curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.3.0/install.sh
+curl -fsSLo install.sh https://raw.githubusercontent.com/astricmy/warp-screenshare-scanner/v0.3.1/install.sh
 less install.sh
 bash install.sh
 warp-scan --test
@@ -79,7 +79,11 @@ Os achados de arquivo exibem o caminho observado, por exemplo `/storage/emulated
 
 ### Textos, logs e arquivos TAS
 
-Com a leitura de arquivos autorizada, o scanner percorre até 24 níveis nas pastas permitidas, dentro dos limites de tempo e arquivos. Inclui os logs externos em `Android/data/com.roblox.client/files/logs` quando legíveis. Em textos e logs, o relatório lista correspondências suspeitas. Uma busca separada procura arquivos `.tas` soltos por nome em toda a parte legível do armazenamento compartilhado principal. Ela registra caminho, tamanho e data. Entradas em ZIPs ficam fora desse inventário. Pastas inacessíveis ou limites de tempo e quantidade tornam a cobertura parcial. Se o ZArchiver estiver visível ao Android, o jogador pode abri-lo para copiar ou extrair amostras em `Download/WARP`. O caminho relatado nesse caso é o da cópia.
+Com a leitura de arquivos autorizada, o scanner percorre até 24 níveis nas pastas permitidas, dentro dos limites de tempo e arquivos. Inclui os logs externos em `Android/data/com.roblox.client/files/logs` quando legíveis. Em textos e logs, o relatório lista correspondências suspeitas. Se o ZArchiver estiver visível ao Android, o jogador pode abri-lo para copiar ou extrair amostras em `Download/WARP`. O caminho relatado nesse caso é o da cópia.
+
+A busca por arquivos soltos `.tas` começa automaticamente quando o jogador autoriza a verificação de arquivos. Ela percorre o armazenamento do celular, incluindo o espaço compartilhado, os volumes montados (por exemplo, um cartão SD), as pastas de aplicativos e os volumes do sistema que o Android permitir percorrer. O Termux, o ADB local pareado e o root já disponível têm permissões diferentes. O relatório informa a cobertura de cada área, inclusive quando o acesso falha ou a busca atinge um limite.
+
+O resumo no Discord mostra o número de arquivos encontrados, exemplos de caminhos e a quantidade de áreas completas, parciais e não verificadas. O inventário local conserva os caminhos encontrados mesmo quando ultrapassam o limite de detalhes dos anexos. A busca compara a extensão do arquivo, inclusive `.TAS`, sem abrir o conteúdo ou examinar entradas de ZIP.
 
 O modelo local compara amostras de textos sinalizados a exemplos sintéticos de código e documentação (TF-IDF e vizinho mais próximo). Além de priorizar achados com a mesma gravidade e peso, a triagem pode sugerir a revisão de um arquivo sem assinatura quando reconhece pares de chamadas executáveis em até 12.288 caracteres e há semelhança com os exemplos do modelo. O relatório registra o motivo da sugestão. O modelo pode se abster e não altera a pontuação. Esta versão ainda não tem avaliação de precisão com um conjunto independente de casos reais.
 
@@ -105,7 +109,7 @@ O perfil é consultado com `POST /v1/usernames/users` e `GET /v1/users/{userId}`
 
 A base `signatures.json` reúne sementes não validadas. A staff deve conferir a origem de pacotes, hashes e certificados em instalações de referência e registrar fonte e data. A falta de referência confiável gera cobertura parcial. A atualização opcional por `WARP_SIGNATURES_URL` exige o SHA-256 em `WARP_SIGNATURES_SHA256`, distribuído pela staff por um canal independente. A rota opcional `/signatures` do relay usa o token privado. Falhas preservam a base pública local.
 
-O scanner limita a análise de conteúdo às pastas permitidas. A busca separada por nomes .tas percorre o armazenamento compartilhado. O relatório pode incluir texto reconstruído dos padrões encontrados, caminho, tamanho, datas e hash. A imagem aprovada é enviada inteira e pode revelar notificações. A revisão visual pelo jogador é indispensável. As restrições de coleta, as recomendações de retenção e o contato de segurança estão em [SECURITY.md](SECURITY.md).
+O scanner limita a análise de conteúdo às pastas permitidas. A busca separada por nomes .tas percorre o armazenamento acessível do aparelho. O relatório pode incluir texto reconstruído dos padrões encontrados, caminho, tamanho, datas e hash. A imagem aprovada é enviada inteira e pode revelar notificações. A revisão visual pelo jogador é indispensável. As restrições de coleta, as recomendações de retenção e o contato de segurança estão em [SECURITY.md](SECURITY.md).
 
 A data de compilação do Android não determina a data de formatação. Uso recente, instalação recente e uma pasta vazia são indícios com várias explicações. A cobertura de uso pode abranger menos de 72 horas, dependendo do fabricante e das permissões. O relatório apresenta o intervalo disponível. O scanner não recupera arquivos apagados, nem varre bancos privados de teclados, mensageiros e navegadores. O aparelho controla o processo e pode adulterar o resultado.
 

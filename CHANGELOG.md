@@ -1,5 +1,10 @@
 # Histórico
 
+## 0.3.1 — Busca de arquivos .tas no aparelho
+
+- Descobre volumes e áreas de armazenamento do Android e procura arquivos .tas soltos usando os acessos disponíveis no aparelho.
+- Registra resultados e limites por área e preserva os caminhos observados no relatório local. A busca de nomes tem limites próprios, independentes da quantidade de scripts analisados.
+
 ## 0.3.0 — Perfis informados e análise de arquivos e logs
 
 - Solicita os nicks no Termux. Resolve o perfil público do Roblox e monta o link do Discord quando o jogador fornece o ID.

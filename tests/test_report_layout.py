@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 
 from warp_scanner.core import unavailable
-from warp_scanner.report import build, discord_payload, render_text
+from warp_scanner.report import build, discord_payload, envelope, render_text
 
 
 FIELD_ORDER = (
@@ -43,6 +43,45 @@ class ReportLayoutTests(unittest.TestCase):
     def report(self, findings=()):
         self.modules["M8"]["findings"] = list(findings)
         return build(self.ctx, list(self.modules.values()), {"status": "OK LOCAL"})
+
+    def test_tas_coverage_paths_and_local_overflow(self):
+        self.ctx.consent["files"] = True
+        roots = ["/storage/emulated/0", "/storage/volume", "/data/local/tmp"]
+        paths = [f"{root}/sample{i}.tas" for i, root in enumerate(roots)]
+        self.modules["M8"]["data"] = {"arquivos_tas": 3, "caminhos_tas": paths}
+        self.modules["M8"]["checks"] = [
+            {"name": "arquivos_tas", "status": "PARCIAL"},
+            *({"name": "Busca .tas — " + area, "status": status, "reason": "Teste"}
+              for area, status in zip(("Interno", "Cartão", "Apps"), ("OK", "PARCIAL", "NÃO VERIFICADO")))
+        ]
+        self.ctx.settings["max_findings"] = 1
+        report = self.report(finding(i, category="arquivo TAS", evidence={"caminho_android": path})
+                             for i, path in enumerate(paths))
+        self.assertEqual(report["caminhos_tas_adicionais_locais"], paths[1:])
+        self.assertIn("Busca .tas — Apps: NÃO VERIFICADO", render_text(report, include_extra_tas=True))
+        upload = envelope(report)
+        attached = json.loads(upload["attachments"][0]["content"])
+        self.assertNotIn("caminhos_tas_adicionais_locais", attached)
+        self.assertEqual(attached["outros_tas_no_relatorio_local"], 2)
+        summary = upload["payload"]["embeds"][0]["description"]
+        self.assertIn("3 • busca parcial", summary)
+        self.assertIn("1 completas • 1 parciais • 1 não verificadas", summary)
+        for path in paths:
+            self.assertIn(path, summary)
+
+    def test_giant_tas_listing_fits_relay_and_retains_reviewed_finding(self):
+        records = [finding(i, category="arquivo TAS", evidence={"caminho_android": "/sdcard/" + "🦋" * 900 + f"{i}.tas"})
+                   for i in range(110)]
+        report = self.report(records)
+        report["capture"] = {"finding_id": records[50]["id"]}
+        remote = envelope(report)
+        self.assertLess(len(json.dumps(remote, ensure_ascii=False).encode()), 256 * 1024)
+        attached = json.loads(remote["attachments"][0]["content"])
+        self.assertEqual(len(attached["findings"]), 4)
+        self.assertIn(records[50]["id"], [f["id"] for f in attached["findings"]])
+        self.assertEqual(attached["outros_tas_no_relatorio_local"], 106)
+        self.assertEqual(len(report["caminhos_tas_adicionais_locais"]), 10)
+        self.assertEqual(len(report["findings"]), 100)
 
     @staticmethod
     def field(summary, label):

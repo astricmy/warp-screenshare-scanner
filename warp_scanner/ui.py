@@ -71,7 +71,9 @@ def consent_screen():
     a descrição pública será usada apenas para verificar o código da sessão.
     Com sua autorização, o scanner analisa textos, scripts e logs nas pastas
     indicadas, inclusive logs externos acessíveis do Roblox. Ele lista arquivos
-    .tas soltos pelo nome no armazenamento compartilhado acessível e usa um
+    .tas soltos pelo nome nas áreas acessíveis do celular, incluindo volumes
+    montados (cartão SD e USB), pastas de aplicativos e do sistema. O acesso
+    a cada área depende das permissões do Termux, ADB ou root. O scanner usa um
     modelo local para sugerir textos que merecem revisão.
     Você também pode escolher um histórico exportado para contar visitas a
     Pastebin e MediaFire e autorizar a leitura de avisos recentes do carregador
@@ -95,7 +97,7 @@ def consent_screen():
     if not choice("Digite ACEITO para continuar ou RECUSO para sair: ", {"aceito", "s", "sim"}, {"recuso", "n", "não", "nao"}):
         return None
     return {"clipboard":yes_no("Autoriza uma leitura do clipboard atual?"),
-            "files":yes_no("Autoriza analisar textos, logs e scripts nas pastas indicadas e localizar .tas soltos pelo nome no armazenamento compartilhado?"),
+            "files":yes_no("Autoriza analisar textos, logs e scripts nas pastas indicadas e buscar .tas soltos pelo nome em todo o armazenamento acessível do celular?"),
             "discord":yes_no("Quer informar seu nick do Discord para o relatório?"),
             "browser_history":yes_no("Quer selecionar um histórico exportado do Chrome para contar visitas a Pastebin e MediaFire?"),
             "runtime_logs":yes_no("Autoriza consultar os avisos do carregador do Roblox e o histórico de encerramentos do jogo?"),

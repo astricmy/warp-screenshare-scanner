@@ -184,11 +184,12 @@ def collect(ctx) -> dict:
                              "Arquivos inacessíveis, binários ou limites atingidos." if skipped else "Análise estática de arquivos elegíveis concluída."))
         checks.append(_check("TXT e logs", status,
                              f"{data['txt_logs_analisados']} lidos, {data['txt_logs_suspeitos']} com assinatura ou chamada suspeita. Pasta de logs externos do Roblox: {stats.get('roblox_logs', 'não observada')}."))
-        tas_findings, tas_check = tas.collect(ctx, max_files, max(1, float(getattr(ctx.args, "max_seconds", 30))))
+        tas_findings, tas_check, area_checks = tas.collect(ctx, max(1, float(getattr(ctx.args, "max_seconds", 30))))
         findings.extend(tas_findings)
         data["arquivos_tas"] = len(tas_findings)
         data["caminhos_tas"] = [f["evidence"]["caminho_android"] for f in tas_findings[:3]]
         checks.append(tas_check)
+        checks.extend(area_checks)
     else:
         checks.append(_check("arquivos_autorizados", "NÃO VERIFICADO", "Leitura de conteúdo recusada pelo jogador."))
         checks.append(_check("arquivos_tas", "NÃO VERIFICADO", "Busca de arquivos não autorizada."))

@@ -203,15 +203,20 @@ def overview(report, top=4):
             lines.append(f"📁 Textos e logs: {files['txt_logs_suspeitos']}/{files['txt_logs_analisados']} sinalizados • IA local: {files.get('sugestoes_ia', 0)} sugestões adicionais")
         else:
             lines.append("📁 Textos e logs: leitura não verificada")
+    if report.get("consent", {}).get("files") and "arquivos_tas" in files:
         coverage = check(report, "M8", "arquivos_tas")
+        areas = Counter(c.get("status") for c in module(report, "M8").get("checks", [])
+                        if c.get("name", "").startswith("Busca .tas — "))
         if coverage in ("OK", "PARCIAL"):
             partial = " • busca parcial" if coverage == "PARCIAL" else ""
-            lines.append(f"📄 Arquivos .tas soltos: {files['arquivos_tas']}{partial}")
-            paths = files.get("caminhos_tas", [])
-            if paths:
-                lines.append("└ " + span(paths[0], 110))
+            lines.append(f"📄 Arquivos .tas soltos encontrados: {files['arquivos_tas']}{partial}")
+            for path in files.get("caminhos_tas", [])[:3]:
+                lines.append("└ " + span(path, 90))
         else:
             lines.append("📄 Arquivos .tas soltos: busca não verificada")
+        if areas:
+            lines.append(f"└ Áreas: {areas['OK']} completas • {areas['PARCIAL']} parciais • "
+                         f"{areas['NÃO VERIFICADO']} não verificadas. Detalhes nos anexos.")
     if s["clipboard"]:
         n = s["clipboard"]
         clip = f"⚠️ **{n} {'padrão suspeito' if n == 1 else 'padrões suspeitos'}** (leitura única)"

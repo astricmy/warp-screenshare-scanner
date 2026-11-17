@@ -1,4 +1,4 @@
-"""Inventário por extensão na memória compartilhada primária. Apenas metadados."""
+"""Inventário de arquivos .tas soltos por área de armazenamento e capacidade disponível."""
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import os
@@ -6,6 +6,7 @@ from pathlib import Path
 import stat
 import time
 
+from . import tas_android, tas_roots
 from .safety import redact
 
 
@@ -28,64 +29,106 @@ def _entries(path, parent_fd):
         os.close(fd)
 
 
-def collect(ctx, max_files, max_seconds):
-    root = Path(ctx.storage)
-    deadline = time.monotonic() + max_seconds
-    entry_limit = max(256, max_files * 32)
-    matches = []
-    seen_directories = set()
-    visited = 0
-    opened = 0
-    errors = 0
+def _walk_local(area, timeout):
+    deadline = time.monotonic() + timeout
+    pruned = set(map(Path, area.prune))
+    seen = set()
+    paths = []
+    opened = errors = 0
     limited = False
-    depth_limited = False
 
     def walk(path, parent_fd, depth):
-        nonlocal opened, errors, visited, limited, depth_limited
+        nonlocal opened, errors, limited
+        if path in pruned:
+            return
+        if time.monotonic() >= deadline or depth > 256:
+            limited = True
+            return
         try:
             with _entries(path, parent_fd) as (entries, fd):
                 directory = os.fstat(fd) if fd is not None else path.stat(follow_symlinks=False)
-                identity = (directory.st_dev, directory.st_ino)
-                if directory.st_ino:
-                    if identity in seen_directories:
-                        return
-                    seen_directories.add(identity)
+                key = directory.st_dev, directory.st_ino
+                if directory.st_ino and key in seen:
+                    return
+                seen.add(key)
                 opened += 1
                 for entry in entries:
-                    if limited or visited >= entry_limit or len(matches) >= max_files or time.monotonic() >= deadline:
+                    if time.monotonic() >= deadline:
                         limited = True
-                        return
-                    visited += 1
+                        break
                     try:
                         child = path / entry.name
                         if entry.is_dir(follow_symlinks=False):
-                            if depth >= 64:
-                                depth_limited = True
-                            else:
-                                walk(child, fd, depth + 1)
-                        elif entry.name.casefold().endswith(".tas"):
-                            meta = entry.stat(follow_symlinks=False)
-                            if stat.S_ISREG(meta.st_mode):
-                                stamp = datetime.fromtimestamp(meta.st_mtime, timezone.utc).isoformat()
-                                matches.append(ctx.finding(
-                                    "M8", "arquivo TAS", "Arquivo solto com extensão .tas",
-                                    {"caminho": redact(child.relative_to(root).as_posix(), 1024),
-                                     "caminho_android": redact(child.as_posix(), 1024),
-                                     "tamanho": meta.st_size, "mtime": stamp,
-                                     "limite": "Extensão observada. Conteúdo e uso não verificados."},
-                                    "INFORMATIVO", "artifact", time=stamp))
-                    except (OSError, OverflowError, ValueError):
+                            walk(child, fd, depth + 1)
+                        elif entry.name.casefold().endswith(".tas") and stat.S_ISREG(entry.stat(follow_symlinks=False).st_mode):
+                            paths.append(child)
+                    except OSError:
                         errors += 1
         except (OSError, ValueError):
             errors += 1
 
-    walk(root, None, 0)
-    status = "OK" if opened else "NÃO VERIFICADO"
-    if opened and (limited or depth_limited or errors):
-        status = "PARCIAL"
-    reason = f"{len(matches)} arquivos .tas soltos encontrados em {opened} pastas do armazenamento compartilhado primário."
-    if errors:
-        reason += f" Leituras indisponíveis: {errors}."
-    if limited or depth_limited:
-        reason += " Limite de busca atingido."
-    return matches, {"name": "arquivos_tas", "requires": "none", "status": status, "reason": reason}
+    walk(Path(area.path), None, 0)
+    status = "NÃO VERIFICADO" if not opened else "PARCIAL" if errors or limited else "OK"
+    reason = f"{opened} pastas percorridas. {errors} falhas de leitura."
+    if limited:
+        reason += " Um limite de tempo ou profundidade foi atingido."
+    return paths, status, reason
+
+
+def collect(ctx, max_seconds):
+    areas, notes = tas_roots.discover(ctx)
+    matches, checks = {}, []
+    android = Path("/system/bin/getprop").is_file()
+    for area in areas:
+        caps = ["none"]
+        if android:
+            print(f"Procurando .tas — {area.label}…", flush=True)
+            if area.privileged:
+                caps = [cap for cap in ("root", "adb") if ctx.privilege.get(cap)] + caps
+        results = []
+        keys = set()
+        for cap in caps:
+            if android:
+                paths, status, reason = tas_android.scan_area(ctx, area, cap, max_seconds)
+            else:
+                paths, status, reason = _walk_local(area, max_seconds)
+            results.append((status, cap, reason))
+            for value in paths:
+                path = Path(value)
+                if not path.is_absolute() or not path.is_relative_to(area.path) or ".." in path.parts:
+                    continue
+                if not path.name.casefold().endswith(".tas"):
+                    continue
+                key = area.key(path)
+                keys.add(key)
+                if key not in matches:
+                    display = redact(str(area.display_path(path)), 1024)
+                    evidence = {"caminho": display, "caminho_android": display, "área": area.label,
+                                "limite": "Identificação por extensão. Conteúdo e uso não verificados."}
+                    try:
+                        metadata = path.stat(follow_symlinks=False)
+                        if stat.S_ISREG(metadata.st_mode):
+                            evidence.update(tamanho=metadata.st_size,
+                                            mtime=datetime.fromtimestamp(metadata.st_mtime, timezone.utc).isoformat())
+                    except (OSError, OverflowError, ValueError):
+                        pass
+                    matches[key] = ctx.finding(
+                        "M8", "arquivo TAS", "Arquivo solto com extensão .tas",
+                        evidence, "INFORMATIVO", "artifact", requires=cap, time=evidence.get("mtime"))
+            if status == "OK":
+                break
+        # A shell menos privilegiada pode ver uma árvore menor em seu próprio
+        # namespace. Uma leitura parcial nessa área permanece registrada.
+        order = {"PARCIAL": 2, "OK": 1, "NÃO VERIFICADO": 0}
+        status, cap, reason = max(results, key=lambda item: order[item[0]])
+        checks.append({"name": "Busca .tas — " + area.label, "requires": cap, "status": status,
+                       "reason": f"{len(keys)} arquivo(s) .tas observado(s). {reason}"})
+    complete = sum(c["status"] == "OK" for c in checks)
+    status = "NÃO VERIFICADO"
+    if matches or any(c["status"] != "NÃO VERIFICADO" for c in checks):
+        status = "OK" if complete == len(checks) and not notes else "PARCIAL"
+    reason = f"{len(matches)} arquivo(s) .tas solto(s). Áreas com leitura completa: {complete}/{len(checks)}."
+    if notes:
+        reason += " " + " ".join(notes)
+    overall = {"name": "arquivos_tas", "requires": "none", "status": status, "reason": reason}
+    return list(matches.values()), overall, checks
